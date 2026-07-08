@@ -1,0 +1,60 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="h-full flex flex-col" x-data='createTemplate({{ clone_data | safe if clone_data else "null" }})'>
+    <div class="flex justify-between items-start mb-6">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800" x-text="templateName ? 'Edit ' + templateName : 'Create New Template'">Create New Template</h2>
+            <p class="text-gray-500">Configure a reusable template for your feeds.</p>
+        </div>
+        <div class="flex flex-col items-end gap-3">
+            <div class="flex items-center gap-4">
+                <input type="text" x-model="clientName" required class="border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-2 border" placeholder="Client Name (e.g. Acme)">
+                <input type="text" x-model="templateName" required class="border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-2 border" placeholder="Template Name">
+                
+                <button type="button" @click="testMapping" class="bg-gray-100 text-gray-700 border border-gray-300 px-4 py-2 rounded-md hover:bg-gray-200 transition font-medium">
+                    Test Mapping
+                </button>
+                
+                <button @click="submitForm" class="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition font-medium disabled:opacity-50" :disabled="isSubmitting || !templateName || !clientName">
+                    <span x-show="!isSubmitting">Save</span>
+                    <span x-show="isSubmitting">Saving...</span>
+                </button>
+            </div>
+            <div class="flex items-center gap-2">
+                <input type="checkbox" id="scheduleImmediately" x-model="scheduleImmediately" class="w-4 h-4 text-indigo-600 rounded border-gray-300">
+                <label for="scheduleImmediately" class="text-sm text-gray-700 font-medium">Schedule Immediately</label>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Test Result Modal (Hidden by default) -->
+    <div x-show="showTestModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" style="display: none;">
+        <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[80vh] flex flex-col" @click.away="showTestModal = false">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800">Test Mapping Payload</h3>
+                <button @click="showTestModal = false" class="text-gray-500 hover:text-gray-700">&times;</button>
+            </div>
+            <div class="flex-1 overflow-y-auto bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <pre class="text-sm font-mono text-gray-800 whitespace-pre-wrap" x-text="testPayloadJSON"></pre>
+            </div>
+        </div>
+    </div>
+
+    <div x-show="message" class="mb-4 p-4 rounded"
+        :class="isError ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'" x-text="message"
+        style="display: none;"></div>
+
+    <!-- 2 Panes Layout -->
+    <div class="flex flex-1 gap-6 min-h-0">
+        <!-- LEFT PANE: Partner Config -->
+        {% include 'partials/partner_pane.html' %}
+
+        <!-- RIGHT PANE: Client Config -->
+        {% include 'partials/client_pane.html' %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<script src="{{ url_for('static', filename='js/create_template.js') }}"></script>
+{% endblock %}

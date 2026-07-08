@@ -1,0 +1,53 @@
+<div class="theme-panel flex flex-col" :class="{'fixed inset-4 z-50': fullLeft}">
+    <div class="p-4 border-b border-black/10 flex justify-between items-center">
+        <h3 class="font-bold">Source (Partner API)</h3>
+        <div class="flex items-center gap-3">
+            <button @click="addSource()" class="theme-btn px-3 py-1 text-xs rounded">+ Add Endpoint</button>
+            <button @click="fullLeft = !fullLeft" class="theme-text-muted hover:opacity-75">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4">
+                    </path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="p-6 flex-1 overflow-y-auto space-y-6">
+        <template x-for="(src, idx) in sources" :key="src.id">
+            <div class="relative p-5 border border-black/10 rounded-lg bg-gray-50/50 shadow-sm">
+                <button x-show="sources.length > 1" @click="removeSource(idx)" class="absolute top-3 right-3 text-red-400 hover:text-red-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+                <h4 class="font-bold text-sm mb-4 theme-text-muted">ENDPOINT <span x-text="idx + 1"></span></h4>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Select API Endpoint</label>
+                        <select x-model="src.selectedApi" @change="src.url = src.selectedApi ? ('https://app.avlview.com/open-api' + src.selectedApi) : ''"
+                            class="theme-input w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">-- Choose API --</option>
+                            <template x-for="api in availableApis" :key="api.path">
+                                <option :value="api.path" x-text="api.name + ' (' + api.path + ')'"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Source URL</label>
+                        <input type="text" x-model="src.url"
+                            class="theme-input w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            placeholder="https://api.partner.com/v1/data">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Source Auth Key (Bearer)</label>
+                        <input type="password" x-model="src.auth_token"
+                            class="theme-input w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            placeholder="Optional">
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+</div>

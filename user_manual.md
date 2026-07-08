@@ -1,0 +1,62 @@
+# 📖 Beginner's Guide to the Universal API Bridge
+
+Welcome! This guide is written for complete beginners. If you want to take data from an internal system (like your GPS tracker) and push it to an external client without writing code, you are in the right place!
+
+---
+
+## 🚦 Phase 1: Creating a Configuration (The Blueprint)
+
+Before the bridge can send data, you have to tell it **where to get it**, **how it should look**, and **how often to run**.
+
+1. Go to your browser and open `http://127.0.0.1:5000`
+2. Click the **"+ New Schedule"** button on the Dashboard.
+3. You will see a screen divided into two sides: **Source (Left)** and **Destination (Right)**.
+
+### The Left Side (Getting Data)
+You can now pull data from multiple different APIs simultaneously!
+1. **Source API**: Select an API from the dropdown or paste a custom URL.
+2. **Auth Key**: If required, type the API token here.
+3. **+ Add Endpoint**: Need to combine GPS data with fuel data from a different URL? Click this button to add another API endpoint to your feed.
+
+### The Right Side (Formatting Data)
+Now we have to translate your data into the exact format the client requested.
+1. **Destination URL**: Paste the API link where the client wants to receive the data.
+2. **Auth Type**: If the client requires a token, select Bearer Token and enter it.
+3. **Field Mapping**: Click **"+ Add Field"**. Select the Source field from the dropdown (you will notice multi-source fields are prefixed like `source_0.gps_data` and `source_1.fuel_data` so you know exactly which endpoint they came from). Then, type exactly what the Client wants that field to be named in the Target field box.
+4. **Schedule**: At the bottom of the screen, type in an **Interval** (in seconds). If you type `20`, the bridge will push data to the client every 20 seconds.
+5. Click **"Save Config & Schedule"**.
+
+---
+
+## ⚙️ Phase 2: Managing Schedules and Templates
+
+### The Schedule Dashboard
+The main homepage of the app (`http://127.0.0.1:5000`) is your **Schedule Dashboard**.
+Here you can:
+- See all active background feeds.
+- Monitor the exact time they last pushed data.
+- Click **Start** or **Stop** to pause an active feed without deleting it.
+
+### The Templates Manager
+If you click **Templates** in the top navigation bar, you can manage the reusable configurations you've built.
+- **Edit**: Clicking Edit opens a popup where you can rename your template, change the API keys, or adjust your Field Mappings instantly.
+- **Clone**: This is a massive time-saver. If you have a completely mapped out GPS feed and you want to send it to a *new* client, click **Clone**. A popup will appear perfectly pre-filled with your Source config and Mappings. All you have to do is type in the new Destination URL and hit Save!
+
+---
+
+## 📊 Phase 3: Viewing API Usage (OpenTelemetry)
+
+You installed **OpenTelemetry** into this application. Why? Because you need to know exactly how much data is flowing through your bridge (API Usage). 
+
+Every time the bridge wakes up and pushes data, OpenTelemetry records a "Trace" (a receipt of the transaction). 
+
+### How to see your API Usage right now:
+Currently, the app is running in "Development Mode". 
+If you look at the black terminal screen where you typed `python run.py`, you will see OpenTelemetry printing out detailed receipts every time a job runs. It shows exactly how long the API took to respond, what URL was hit, and the status code.
+
+### How to see your API Usage in the future:
+When you are ready to put this app on a real server for production, you can connect OpenTelemetry to a visual dashboard (like **Grafana**, **Jaeger**, or **Datadog**). 
+Instead of printing receipts to a black terminal, it will send them to your dashboard, allowing you to see beautiful graphs showing:
+- How many thousands of API calls you made today.
+- Which client endpoints are slow or timing out.
+- Exactly how much data you are processing per hour.

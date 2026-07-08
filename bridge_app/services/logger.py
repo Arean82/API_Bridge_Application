@@ -1,0 +1,28 @@
+# ==================================================================
+# File: bridge_app/engine/logger.py
+# Description: Utility for logging pull/push events and payload data.
+# ==================================================================
+
+import json
+from datetime import datetime
+from bridge_app.models import JobLog
+from bridge_app.extensions import db
+from flask import current_app
+
+def log_job(job_id, status, payload, http_status=None, error_message=None):
+    """
+    Logs the outcome of a pull/push job to the database.
+    """
+    # Needs application context because it's run from the scheduler
+    try:
+        log = JobLog(
+            job_id=job_id,
+            status=status,
+            http_status=http_status,
+            error_message=error_message,
+            payload_json=json.dumps(payload) if payload else None
+        )
+        db.session.add(log)
+        db.session.commit()
+    except Exception as e:
+        print(f"Failed to write log for job {job_id}: {e}")

@@ -1,0 +1,8 @@
+# ==================================================================
+# File: bridge_app/controllers/__init__.py
+# Description: Blueprint exports for controllers.
+# ==================================================================
+
+from .ui_controller import ui_bp
+from .engine_controller import api_bp
+from .observability_controller import obs_bp

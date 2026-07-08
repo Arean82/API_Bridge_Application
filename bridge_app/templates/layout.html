@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal API Bridge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body x-data="themeManager()" :data-theme="currentTheme" class="font-sans antialiased">
+    
+    <nav class="theme-nav p-4 flex justify-between items-center">
+        <div class="flex items-center space-x-6">
+            <h1 class="text-2xl font-bold tracking-wide">Universal API Bridge</h1>
+            <nav class="flex gap-4">
+                <a href="/" class="hover:opacity-75 transition">Schedule Config</a>
+                <a href="/templates" class="hover:opacity-75 transition">Templates</a>
+                <a href="/templates/create" class="hover:opacity-75 transition">Create Template</a>
+            </nav>
+        </div>
+        <div>
+            <select x-model="currentTheme" @change="saveTheme" class="bg-white text-black text-sm rounded-md border border-gray-300 p-1 cursor-pointer">
+                <option value="default">Default Light</option>
+                <option value="glass">Glassmorphism</option>
+                <option value="clay">Claymorphism</option>
+                <option value="neobrut">Neo-Brutalism</option>
+            </select>
+        </div>
+    </nav>
+
+    <div class="container mx-auto mt-8 p-4">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+</body>
+</html>
