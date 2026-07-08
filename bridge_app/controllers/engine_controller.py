@@ -165,12 +165,37 @@ def test_mapping():
 
 @api_bp.route('/docs', methods=['GET'])
 def get_api_docs():
-    """Parses the local api-docs.json and returns a list of endpoints and their available properties."""
+    """Parses swagger docs from either a connection_id or the local sample/api-docs.json"""
     import os
-    doc_path = os.path.join(current_app.root_path, '..', 'sample', 'api-docs.json')
+    connection_id = request.args.get('connection_id')
+    docs = None
+    
+    if connection_id:
+        from bridge_app.models import SwaggerConnection
+        conn = SwaggerConnection.query.get(connection_id)
+        if conn:
+            if conn.is_local_file and conn.local_file_path:
+                try:
+                    with open(conn.local_file_path, 'r') as f:
+                        docs = json.load(f)
+                except:
+                    pass
+            elif conn.json_content:
+                try:
+                    docs = json.loads(conn.json_content)
+                except:
+                    pass
+
+    # Fallback to local sample if no docs loaded yet
+    if not docs:
+        doc_path = os.path.join(current_app.root_path, '..', 'sample', 'api-docs.json')
+        try:
+            with open(doc_path, 'r') as f:
+                docs = json.load(f)
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+            
     try:
-        with open(doc_path, 'r') as f:
-            docs = json.load(f)
             
         endpoints = []
         paths = docs.get('paths', {})
@@ -219,6 +244,61 @@ def get_api_docs():
         return jsonify(endpoints)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/config/theme', methods=['POST'])
+def update_theme():
+    """Saves the UI theme and color mode to config.ini"""
+    from bridge_app.config import set_theme
+    data = request.json
+    theme_name = data.get('theme', 'default')
+    color_mode = data.get('colorMode', 'auto')
+    set_theme(theme_name, color_mode)
+    return jsonify({"status": "success"})
+
+# --- Swagger Connections CRUD ---
+@api_bp.route('/connections', methods=['GET'])
+def get_connections():
+    from bridge_app.models import SwaggerConnection
+    connections = SwaggerConnection.query.all()
+    return jsonify([c.to_dict() for c in connections])
+
+@api_bp.route('/connections', methods=['POST'])
+def add_connection():
+    from bridge_app.models import SwaggerConnection
+    from bridge_app.extensions import db
+    import requests
+    data = request.json
+    
+    conn = SwaggerConnection(
+        name=data.get('name'),
+        url=data.get('url'),
+        is_local_file=data.get('is_local_file', False),
+        local_file_path=data.get('local_file_path'),
+        json_content=data.get('json_content')
+    )
+    
+    # Fetch initial JSON if URL provided
+    if conn.url and not conn.is_local_file:
+        try:
+            resp = requests.get(conn.url, timeout=10)
+            if resp.ok:
+                conn.json_content = resp.text
+        except Exception as e:
+            # We save it anyway, APScheduler will retry later
+            pass
+
+    db.session.add(conn)
+    db.session.commit()
+    return jsonify(conn.to_dict())
+
+@api_bp.route('/connections/<int:id>', methods=['DELETE'])
+def delete_connection(id):
+    from bridge_app.models import SwaggerConnection
+    from bridge_app.extensions import db
+    conn = SwaggerConnection.query.get_or_404(id)
+    db.session.delete(conn)
+    db.session.commit()
+    return jsonify({"status": "deleted"})
 
 @api_bp.route('/save_config', methods=['POST'])
 def save_config():

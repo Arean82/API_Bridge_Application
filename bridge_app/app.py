@@ -44,12 +44,17 @@ def create_app(config_class=Config):
     app.register_blueprint(api_bp)
     app.register_blueprint(obs_bp)
 
+    from bridge_app.config import get_theme
+    @app.context_processor
+    def inject_theme():
+        return dict(current_theme=get_theme())
+
     # Create tables and schedule jobs
     with app.app_context():
         db.create_all()
         
         from bridge_app.models import JobModel
-        from bridge_app.services.task_runner import pull_and_push_job
+        from bridge_app.services.task_runner import pull_and_push_job, update_swagger_connections
         jobs = JobModel.query.filter_by(is_active=True).all()
         for job in jobs:
             job_id = f"job_{job.id}"
@@ -61,6 +66,16 @@ def create_app(config_class=Config):
                 seconds=job.schedule_interval,
                 replace_existing=True
             )
+            
+        # Schedule the background update for Swagger connections (e.g., every 1 hour)
+        scheduler.add_job(
+            id='swagger_updater',
+            func=update_swagger_connections,
+            args=[app],
+            trigger='interval',
+            hours=1,
+            replace_existing=True
+        )
 
     return app
 

@@ -1,3 +1,8 @@
+# ==================================================================
+# File: bridge_app/models/job.py
+# Description: 
+# ==================================================================
+
 from datetime import datetime
 from bridge_app.extensions import db
 

@@ -13,9 +13,19 @@ HEADER_TEMPLATE = """# =========================================================
 """
 
 def add_header_to_file(filepath, relative_path):
-    with open(filepath, 'r', encoding='utf-8') as f:
-        content = f.read()
-        
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            content = f.read()
+    except UnicodeDecodeError:
+        try:
+            with open(filepath, 'r', encoding='utf-16') as f:
+                content = f.read()
+        except UnicodeDecodeError:
+            print(f"Skipping (Unknown Encoding): {relative_path}")
+            return
+    except Exception as e:
+        print(f"Skipping (Error reading): {relative_path} - {e}")
+        return
     if content.startswith("# =================================================================="):
         print(f"Skipping (Header already exists): {relative_path}")
         return

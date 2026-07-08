@@ -24,9 +24,11 @@ def create_template_page():
         if template:
             # We blank out the client-specific details, but keep everything else.
             t_dict = template.to_dict()
-            clone_data = json.dumps(t_dict)
+    from bridge_app.models import SwaggerConnection
+    connections = SwaggerConnection.query.all()
+    conns_json = json.dumps([c.to_dict() for c in connections])
             
-    return render_template('create_template.html', clone_data=clone_data)
+    return render_template('create_template.html', clone_data=clone_data, conns_json=conns_json)
 
 @ui_bp.route('/templates')
 def templates_page():
@@ -35,4 +37,10 @@ def templates_page():
     import json
     templates_json = json.dumps([t.to_dict() for t in templates])
     
-    return render_template('templates.html', templates=templates, templates_json=templates_json)
+@ui_bp.route('/connections')
+def connections_page():
+    from bridge_app.models import SwaggerConnection
+    connections = SwaggerConnection.query.all()
+    import json
+    conns_json = json.dumps([c.to_dict() for c in connections])
+    return render_template('connections.html', connections=connections, conns_json=conns_json)

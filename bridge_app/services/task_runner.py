@@ -165,3 +165,42 @@ def pull_and_push_job(app, job_id):
         except Exception as e:
             log_job(job.id, 'FAILED', final_payload, http_status=500, error_message=str(e))
 
+def update_swagger_connections(app):
+    """
+    Background job to refresh Swagger JSON content for remote connections.
+    """
+    with app.app_context():
+        from bridge_app.models import SwaggerConnection
+        from bridge_app.extensions import db
+        import requests
+        from datetime import datetime
+        
+        from bridge_app.services.file_logger import get_connection_logger
+        
+        # Get connections that are remote and URL is not null
+        conns = SwaggerConnection.query.filter_by(is_local_file=False).all()
+        for conn in conns:
+            if not conn.url:
+                continue
+            
+            logger = get_connection_logger(conn.name)
+            logger.info(f"Starting sync for SwaggerConnection: {conn.name} (URL: {conn.url})")
+            
+            try:
+                resp = requests.get(conn.url, timeout=10)
+                if resp.ok:
+                    conn.json_content = resp.text
+                    conn.last_updated = datetime.utcnow()
+                    db.session.commit()
+                    msg = f"Successfully updated SwaggerConnection {conn.name} (ID: {conn.id})"
+                    print(msg)
+                    logger.info(msg)
+                else:
+                    msg = f"Failed to update SwaggerConnection {conn.name} (ID: {conn.id}): HTTP {resp.status_code}"
+                    print(msg)
+                    logger.error(msg)
+            except Exception as e:
+                msg = f"Error updating SwaggerConnection {conn.name} (ID: {conn.id}): {e}"
+                print(msg)
+                logger.error(msg)
+

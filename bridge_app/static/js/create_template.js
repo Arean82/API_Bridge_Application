@@ -1,5 +1,6 @@
 document.addEventListener('alpine:init', () => {
-    Alpine.data('createTemplate', (cloneData) => ({
+    Alpine.data('createTemplate', (cloneData, connsJson) => ({
+        swaggerConnections: connsJson || [],
         clientName: '',
         templateName: '',
         scheduleImmediately: false,
@@ -10,16 +11,14 @@ document.addEventListener('alpine:init', () => {
         fullLeft: false,
         fullRight: false,
 
-        availableApis: [],
-
         sources: [
-            { id: Date.now(), selectedApi: '', url: '', auth_token: '' }
+            { id: Date.now(), connectionId: '', selectedApi: '', url: '', auth_token: '', availableApis: [] }
         ],
 
         get currentApiFields() {
             let allFields = [];
             this.sources.forEach((src, idx) => {
-                let api = this.availableApis.find(a => a.path === src.selectedApi);
+                let api = src.availableApis && src.availableApis.find(a => a.path === src.selectedApi);
                 if (api && api.fields) {
                     api.fields.forEach(f => {
                         allFields.push(`source_${idx}.${f}`);
@@ -36,11 +35,24 @@ document.addEventListener('alpine:init', () => {
         },
 
         addSource() {
-            this.sources.push({ id: Date.now(), selectedApi: '', url: '', auth_token: '' });
+            this.sources.push({ id: Date.now(), connectionId: '', selectedApi: '', url: '', auth_token: '', availableApis: [] });
+            this.fetchApiDocs(this.sources.length - 1);
         },
 
         removeSource(index) {
             this.sources.splice(index, 1);
+        },
+        
+        updateSourceUrl(idx) {
+            let src = this.sources[idx];
+            if (!src.selectedApi) {
+                src.url = '';
+                return;
+            }
+            let conn = this.swaggerConnections.find(c => c.id == src.connectionId);
+            let base = conn && conn.url ? new URL(conn.url).origin : 'https://app.avlview.com';
+            if (base.endsWith('/')) base = base.slice(0, -1);
+            src.url = base + '/open-api' + src.selectedApi;
         },
 
         clientUrl: '',
@@ -55,7 +67,6 @@ document.addEventListener('alpine:init', () => {
         isError: false,
 
         async init() {
-            await this.fetchApiDocs();
             if (cloneData) {
                 this.templateName = cloneData.name ? cloneData.name + ' (Copy)' : '';
                 this.clientName = cloneData.client_name || '';
@@ -73,16 +84,20 @@ document.addEventListener('alpine:init', () => {
                 if (cloneData.sources && cloneData.sources.length > 0) {
                     this.sources = cloneData.sources.map(s => ({
                         id: Date.now() + Math.random(),
-                        selectedApi: '',
+                        connectionId: s.connectionId || '',
+                        selectedApi: s.selectedApi || '',
                         url: s.url || '',
-                        auth_token: s.auth_token || ''
+                        auth_token: s.auth_token || '',
+                        availableApis: []
                     }));
                 } else if (cloneData.partner_url) {
                     this.sources = [{
                         id: Date.now(),
+                        connectionId: '',
                         selectedApi: '',
                         url: cloneData.partner_url,
-                        auth_token: cloneData.partner_auth_token || ''
+                        auth_token: cloneData.partner_auth_token || '',
+                        availableApis: []
                     }];
                 }
 
@@ -102,6 +117,12 @@ document.addEventListener('alpine:init', () => {
                     });
                 }
             }
+            
+            // Fetch initial docs for all sources
+            for (let i = 0; i < this.sources.length; i++) {
+                await this.fetchApiDocs(i);
+            }
+            
             this.$nextTick(() => {
                 let el = document.getElementById('mapping-list');
                 if (el) {
@@ -117,18 +138,23 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
-        async fetchApiDocs() {
+        async fetchApiDocs(idx) {
+            let src = this.sources[idx];
+            let url = '/api/docs';
+            if (src.connectionId) {
+                url += `?connection_id=${src.connectionId}`;
+            }
             try {
-                let res = await fetch('/api/docs');
-                this.availableApis = await res.json();
+                let res = await fetch(url);
+                src.availableApis = await res.json();
 
-                // Match selected APIs based on URLs for cloned data
-                this.sources.forEach(src => {
-                    const match = this.availableApis.find(a => src.url.includes(a.path));
+                // Match selected APIs based on URLs for cloned data if not already set
+                if (!src.selectedApi && src.url) {
+                    const match = src.availableApis.find(a => src.url.includes(a.path));
                     if (match) {
                         src.selectedApi = match.path;
                     }
-                });
+                }
             } catch (e) {
                 console.error("Failed to load API docs", e);
             }
