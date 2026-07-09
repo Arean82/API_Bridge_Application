@@ -61,10 +61,34 @@
                 return;
             }
 
+            const authToken = "{{ conn.auth_token or '' }}";
+            let envs = [];
+            try {
+                const envStr = `{{ conn.environments or '[]' | safe }}`;
+                envs = JSON.parse(envStr.replace(/&quot;/g, '"'));
+            } catch (e) {
+                console.warn("Failed to parse environments", e);
+            }
+
             const ui = SwaggerUIBundle({
                 spec: spec,
                 dom_id: '#swagger-ui',
                 deepLinking: true,
+                requestInterceptor: (req) => {
+                    if (authToken) {
+                        req.headers['Authorization'] = authToken;
+                    }
+                    // Handle environment switching if selected
+                    const envSelector = document.getElementById('env-selector');
+                    if (envSelector && envSelector.value) {
+                        const targetUrl = new URL(req.url);
+                        const overrideUrl = new URL(envSelector.value);
+                        targetUrl.protocol = overrideUrl.protocol;
+                        targetUrl.host = overrideUrl.host;
+                        req.url = targetUrl.href;
+                    }
+                    return req;
+                },
                 presets: [
                     SwaggerUIBundle.presets.apis,
                     SwaggerUIStandalonePreset
@@ -74,6 +98,23 @@
                 ],
                 layout: "BaseLayout"
             });
+            
+            // Inject Environment Dropdown if environments exist
+            if (envs.length > 0) {
+                setTimeout(() => {
+                    const topbar = document.querySelector('.topbar-wrapper') || document.querySelector('.scheme-container');
+                    if (topbar) {
+                        const selectHtml = `<div style="padding: 10px 20px; background: #e0f7fa; border-bottom: 1px solid #b2ebf2; text-align: right;">
+                            <label style="font-weight: bold; margin-right: 10px;">Environment:</label>
+                            <select id="env-selector" style="padding: 5px; border-radius: 4px;">
+                                <option value="">Default (From Spec)</option>
+                                ${envs.map(env => `<option value="${env}">${env}</option>`).join('')}
+                            </select>
+                        </div>`;
+                        topbar.insertAdjacentHTML('afterend', selectHtml);
+                    }
+                }, 1000);
+            }
             window.ui = ui;
         };
     </script>

@@ -77,14 +77,22 @@ document.addEventListener('alpine:init', () => {
         connections: conns,
         showModal: false,
         isSaving: false,
-        loadingMessage: 'Loading...',
-        loading: false,
+        loadingMessage: "",
         newConn: {
-            name: '',
-            url: '',
-            is_local_file: false,
+            name: '', 
+            url: '', 
+            is_local_file: false, 
             local_file_path: '',
-            json_content: ''
+            auth_token: '',
+            sync_schedule: '',
+            environments: ''
+        },
+        loading: false,
+        
+        async init() {
+            // Already loaded via Jinja template script tag above
+            // No need to fetch here, but we can do a background refresh if needed
+            this.loading = false;
         },
         handleFileUpload(event) {
             const file = event.target.files[0];
@@ -97,13 +105,20 @@ document.addEventListener('alpine:init', () => {
             reader.readAsText(file);
         },
         editConnection(conn) {
+            let envs_str = '';
+            if (conn.environments && conn.environments.length > 0) {
+                envs_str = JSON.stringify(conn.environments);
+            }
             this.newConn = {
                 id: conn.id,
                 name: conn.name,
                 url: conn.url,
                 is_local_file: conn.is_local_file,
                 local_file_path: conn.local_file_path,
-                json_content: conn.json_content
+                json_content: conn.json_content,
+                auth_token: conn.auth_token || '',
+                sync_schedule: conn.sync_schedule || '',
+                environments: envs_str
             };
             this.showModal = true;
         },

@@ -13,16 +13,20 @@ from opentelemetry.instrumentation.flask import FlaskInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
-
-# Initialize OpenTelemetry Trace Provider
-trace.set_tracer_provider(TracerProvider())
-# For MVP, we use ConsoleSpanExporter. In prod, switch to OTLPExporter.
-# trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    # Initialize OpenTelemetry Trace Provider with OTLP Exporter
+    if not isinstance(trace.get_tracer_provider(), TracerProvider):
+        provider = TracerProvider()
+        otlp_endpoint = app.config.get('OTLP_ENDPOINT', 'http://localhost:4318/v1/traces')
+        otlp_exporter = OTLPSpanExporter(endpoint=otlp_endpoint)
+        provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
+        trace.set_tracer_provider(provider)
 
     # Instrument Flask and requests
     FlaskInstrumentor().instrument_app(app)

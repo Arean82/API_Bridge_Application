@@ -238,6 +238,17 @@ def update_swagger_connections(app):
         for conn in conns:
             if not conn.url:
                 continue
+                
+            # Respect individual sync_schedule
+            if conn.sync_schedule:
+                from datetime import timedelta
+                now = datetime.utcnow()
+                if conn.sync_schedule == 'hourly' and conn.last_updated and (now - conn.last_updated) < timedelta(hours=1):
+                    continue
+                elif conn.sync_schedule == 'daily' and conn.last_updated and (now - conn.last_updated) < timedelta(days=1):
+                    continue
+                elif conn.sync_schedule == 'weekly' and conn.last_updated and (now - conn.last_updated) < timedelta(weeks=1):
+                    continue
             
             logger = get_connection_logger(conn.name)
             logger.info(f"Starting sync for SwaggerConnection: {conn.name} (URL: {conn.url})")

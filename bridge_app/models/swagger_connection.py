@@ -17,10 +17,16 @@ class SwaggerConnection(db.Model):
     local_file_path = db.Column(db.String(500), nullable=True)
     update_interval_hours = db.Column(db.Integer, default=24)
     is_active = db.Column(db.Boolean, default=True)
+    
+    # Advanced features
+    auth_token = db.Column(db.String(1000), nullable=True)
+    sync_schedule = db.Column(db.String(100), nullable=True)
+    environments = db.Column(db.Text, nullable=True) # JSON array of environment URLs
+    
     last_updated = db.Column(db.DateTime, default=datetime.utcnow)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    def __init__(self, name, url=None, json_content=None, is_local_file=False, local_file_path=None, update_interval_hours=24, is_active=True):
+    def __init__(self, name, url=None, json_content=None, is_local_file=False, local_file_path=None, update_interval_hours=24, is_active=True, auth_token=None, sync_schedule=None, environments=None):
         self.name = name
         self.url = url
         self.json_content = json_content
@@ -28,8 +34,19 @@ class SwaggerConnection(db.Model):
         self.local_file_path = local_file_path
         self.update_interval_hours = update_interval_hours
         self.is_active = is_active
+        self.auth_token = auth_token
+        self.sync_schedule = sync_schedule
+        self.environments = environments
 
     def to_dict(self):
+        import json
+        envs = []
+        if self.environments:
+            try:
+                envs = json.loads(self.environments)
+            except:
+                pass
+                
         return {
             "id": self.id,
             "name": self.name,
@@ -38,6 +55,9 @@ class SwaggerConnection(db.Model):
             "local_file_path": self.local_file_path,
             "update_interval_hours": self.update_interval_hours,
             "is_active": self.is_active,
+            "auth_token": self.auth_token,
+            "sync_schedule": self.sync_schedule,
+            "environments": envs,
             "last_updated": self.last_updated.isoformat() + "Z" if self.last_updated else None,
             "created_at": self.created_at.isoformat() + "Z" if self.created_at else None
         }

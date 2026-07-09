@@ -322,7 +322,10 @@ def add_connection():
         url=data.get('url'),
         is_local_file=data.get('is_local_file', False),
         local_file_path=data.get('local_file_path'),
-        json_content=data.get('json_content')
+        json_content=data.get('json_content'),
+        auth_token=data.get('auth_token'),
+        sync_schedule=data.get('sync_schedule'),
+        environments=data.get('environments')
     )
     
     # Fetch initial JSON if URL provided
@@ -380,6 +383,15 @@ def update_connection(id):
     conn.url = data.get('url', conn.url)
     conn.is_local_file = data.get('is_local_file', conn.is_local_file)
     conn.local_file_path = data.get('local_file_path', conn.local_file_path)
+    
+    # Advanced fields
+    if 'auth_token' in data:
+        conn.auth_token = data['auth_token']
+    if 'sync_schedule' in data:
+        conn.sync_schedule = data['sync_schedule']
+    if 'environments' in data:
+        conn.environments = data['environments']
+        
     if data.get('json_content'):
         conn.json_content = data.get('json_content')
         conn.last_updated = datetime.utcnow()
@@ -510,3 +522,64 @@ def save_config():
         )
         
     return jsonify({"success": True})
+
+@api_bp.route('/mock/<int:conn_id>/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
+def mock_server(conn_id, path):
+    from bridge_app.models import SwaggerConnection
+    conn = SwaggerConnection.query.get_or_404(conn_id)
+    if not conn.json_content:
+        return jsonify({"error": "No Swagger JSON available"}), 404
+        
+    try:
+        spec = json.loads(conn.json_content)
+    except Exception:
+        return jsonify({"error": "Invalid Swagger JSON format"}), 500
+        
+    request_path = "/" + path
+    paths = spec.get('paths', {})
+    
+    # Path matching (handles static paths and {param} paths)
+    matched_path_obj = None
+    if request_path in paths:
+        matched_path_obj = paths[request_path]
+    else:
+        import re
+        for spec_path, path_obj in paths.items():
+            # Convert OpenAPI /users/{id} to regex ^/users/[^/]+$
+            regex_path = re.sub(r'\{[^}]+\}', r'[^/]+', spec_path)
+            if re.match(f"^{regex_path}$", request_path):
+                matched_path_obj = path_obj
+                break
+                
+    if not matched_path_obj:
+        return jsonify({"error": f"Path {request_path} not found in Swagger spec"}), 404
+        
+    method = request.method.lower()
+    if method not in matched_path_obj:
+        return jsonify({"error": f"Method {method.upper()} not supported on {request_path}"}), 405
+        
+    operation = matched_path_obj[method]
+    responses = operation.get('responses', {})
+    
+    # Try 200, 201, or default
+    success_resp = responses.get('200') or responses.get('201') or responses.get('default')
+    if not success_resp:
+        return jsonify({}), 200 # Blank success
+        
+    # Swagger 2.0
+    examples = success_resp.get('examples', {})
+    if 'application/json' in examples:
+        return jsonify(examples['application/json'])
+        
+    # OpenAPI 3.0
+    content = success_resp.get('content', {})
+    if 'application/json' in content:
+        json_content = content['application/json']
+        if 'example' in json_content:
+            return jsonify(json_content['example'])
+        elif 'examples' in json_content:
+            first_key = list(json_content['examples'].keys())[0]
+            if 'value' in json_content['examples'][first_key]:
+                return jsonify(json_content['examples'][first_key]['value'])
+                
+    return jsonify({"_mock_message": "No static example defined in spec for this endpoint."}), 200
