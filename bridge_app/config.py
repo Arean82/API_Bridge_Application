@@ -25,12 +25,18 @@ def get_theme():
     return json.dumps({"theme": theme_val, "colorMode": color_mode})
 
 def set_theme(theme_name, color_mode):
-    if not config_ini.has_section('UI'):
-        config_ini.add_section('UI')
-    config_ini.set('UI', 'theme', theme_name)
-    config_ini.set('UI', 'colorMode', color_mode)
-    with open(config_path, 'w') as configfile:
-        config_ini.write(configfile)
+    import re
+    with open(config_path, 'r') as f:
+        content = f.read()
+        
+    if not '[UI]' in content:
+        content += f"\n[UI]\ntheme = {theme_name}\ncolormode = {color_mode}\n"
+    else:
+        content = re.sub(r'theme\s*=\s*.*', f'theme = {theme_name}', content)
+        content = re.sub(r'colormode\s*=\s*.*', f'colormode = {color_mode}', content)
+        
+    with open(config_path, 'w') as f:
+        f.write(content)
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'hard-to-guess-string'

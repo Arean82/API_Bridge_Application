@@ -55,8 +55,25 @@ Currently, the app is running in "Development Mode".
 If you look at the black terminal screen where you typed `python run.py`, you will see OpenTelemetry printing out detailed receipts every time a job runs. It shows exactly how long the API took to respond, what URL was hit, and the status code.
 
 ### How to see your API Usage in the future:
-When you are ready to put this app on a real server for production, you can connect OpenTelemetry to a visual dashboard (like **Grafana**, **Jaeger**, or **Datadog**). 
-Instead of printing receipts to a black terminal, it will send them to your dashboard, allowing you to see beautiful graphs showing:
-- How many thousands of API calls you made today.
-- Which client endpoints are slow or timing out.
-- Exactly how much data you are processing per hour.
+When you are ready to put this app on a real server for production, you can connect OpenTelemetry to a visual dashboard (like **Grafana**, **Jaeger**, or **Zabbix**). 
+Simply edit the `config.ini` file in the root directory to point the `exporter_endpoint` to your Zabbix or Jaeger server.
+
+---
+
+## 🔒 Phase 4: Advanced Features & Security
+
+### 1. The API Mock Server (For Frontend Developers)
+If you are building a frontend (like a React or Vue app) and you need to test it against an API that isn't finished yet, you can use the built-in **Mock Server**.
+- Every Swagger Connection you save automatically generates a live REST API endpoint at: `http://127.0.0.1:5000/api/mock/<connection_id>/<your_path>`
+- **CORS** is fully enabled, meaning your external React/Vue app can fetch data from this URL without getting blocked by the browser.
+
+### 2. Custom Environments
+In the "Advanced Settings" tab when adding a Swagger connection, you can define a custom JSON array of environment URLs.
+- Example: `[{"name": "Production", "url": "https://api.prod.com"}, {"name": "Staging", "url": "https://api.stage.com"}]`
+- Once saved, a dropdown will appear in the UI allowing you to instantly switch between testing against Staging or Production.
+
+### 3. AES-256-GCM Token Encryption (Security)
+If your APIs require highly sensitive Auth Tokens, you do not need to worry about them being stolen from the database.
+- The first time the app starts, it generates a hyper-secure **Master Key** in your `.env` file (`ENCRYPTION_KEY=...`).
+- When you type an Auth Token into the UI, it is instantly encrypted using **AES-256-GCM** before touching the database.
+- **IMPORTANT**: Back up your `.env` file! If you lose your `ENCRYPTION_KEY`, you will permanently lose access to decrypt your API tokens.

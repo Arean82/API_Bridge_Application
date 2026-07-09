@@ -10,3 +10,5 @@ opentelemetry-instrumentation-requests==0.46b0
 opentelemetry-exporter-otlp==1.25.0
 setuptools
 psycopg2-binary==2.9.9
+Flask-Cors==4.0.0
+cryptography==42.0.5

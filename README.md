@@ -10,7 +10,13 @@ This application adheres to a clean, scalable **Model-View-Controller + Service 
 - **Models (`/models`)**: Defines the data schema (Templates, Configurations, Jobs) and database interactions using SQLite.
 - **Views (`/templates` & `/static`)**: Completely modularized presentation layer. Server-side HTML logic is isolated in `templates/`, while client-side styles and Alpine.js reactivity logic are cleanly separated into `static/css/` and `static/js/` for optimal caching and browser performance.
 - **Controllers (`/controllers`)**: Minimalist API route handlers that act as traffic cops between the Views and Services.
-- **Services (`/services`)**: Heavy lifting and business logic (like background task scheduling, external API fetching, and dynamic payload parsing) are decoupled from the controllers here.
+- **Services (`/services`)**: Heavy lifting and business logic (like background task scheduling, external API fetching, AES-256-GCM encryption, and dynamic payload parsing) are decoupled from the controllers here.
+
+## Advanced Features
+- **AES-256-GCM Token Encryption**: All API auth tokens are safely encrypted in the database at rest using a 256-bit Master Key generated in your `.env` file.
+- **OpenTelemetry Observability (OTLP)**: Natively instruments application traces and exports them via OTLP (compatible with Jaeger, Zabbix, or Datadog) using `config.ini`.
+- **CORS-Enabled Mock Server**: Automatically generates functional `/api/mock/<id>/<path>` REST endpoints from Swagger configurations to serve static JSON examples to external frontends.
+- **Dynamic Environments**: Configure multiple environment URLs (Dev/Staging/Prod) per connection and seamlessly switch between them in the UI.
 
 ## Quick Start
 

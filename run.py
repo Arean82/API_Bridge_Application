@@ -25,22 +25,7 @@ if __name__ == '__main__':
     server_port = config_ini.getint('Server', 'port', fallback=5000)
     server_debug = config_ini.getboolean('Server', 'debug', fallback=False)
 
-    # Lightweight DB Migration (Zero data loss)
-    with app.app_context():
-        from bridge_app.extensions import db
-        from sqlalchemy import text
-        
-        columns_to_add = {
-            "auth_token": "VARCHAR(1000)",
-            "sync_schedule": "VARCHAR(100)",
-            "environments": "TEXT"
-        }
-        for col_name, col_type in columns_to_add.items():
-            try:
-                db.session.execute(text(f"ALTER TABLE swagger_connections ADD COLUMN {col_name} {col_type}"))
-                db.session.commit()
-            except Exception:
-                db.session.rollback() # Column likely already exists
+
 
     # When running as a PyInstaller executable or normal script
     # use_reloader=False is crucial to avoid duplicate APScheduler jobs!

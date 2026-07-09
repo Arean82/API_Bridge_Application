@@ -19,10 +19,20 @@ class SwaggerConnection(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     
     # Advanced features
-    auth_token = db.Column(db.String(1000), nullable=True)
+    _auth_token = db.Column('auth_token', db.String(1000), nullable=True)
     sync_schedule = db.Column(db.String(100), nullable=True)
     environments = db.Column(db.Text, nullable=True) # JSON array of environment URLs
     
+    @property
+    def auth_token(self):
+        from bridge_app.services.encryption import decrypt_token
+        return decrypt_token(self._auth_token)
+        
+    @auth_token.setter
+    def auth_token(self, value):
+        from bridge_app.services.encryption import encrypt_token
+        self._auth_token = encrypt_token(value)
+        
     last_updated = db.Column(db.DateTime, default=datetime.utcnow)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

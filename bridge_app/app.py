@@ -20,8 +20,18 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    # Initialize OpenTelemetry Trace Provider with OTLP Exporter
-    if not isinstance(trace.get_tracer_provider(), TracerProvider):
+    # Enable CORS for API Mock endpoints
+    from flask_cors import CORS
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+    # Initialize OpenTelemetry Trace Provider with OTLP Exporter if enabled
+    import configparser
+    import os
+    config_ini = configparser.ConfigParser()
+    config_ini.read(os.path.join(os.path.abspath(os.path.dirname(os.path.dirname(__file__))), 'config.ini'))
+    otlp_enabled = config_ini.getboolean('OPENTELEMETRY', 'enabled', fallback=False)
+    
+    if otlp_enabled and not isinstance(trace.get_tracer_provider(), TracerProvider):
         provider = TracerProvider()
         otlp_endpoint = app.config.get('OTLP_ENDPOINT', 'http://localhost:4318/v1/traces')
         otlp_exporter = OTLPSpanExporter(endpoint=otlp_endpoint)
