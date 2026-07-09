@@ -319,32 +319,62 @@ def cleanup_failed_payloads():
 def execute_template_mapping(template_id):
     from bridge_app.models.template import TemplateModel
     from bridge_app.app import current_app_instance
-    from bridge_app.services.task_runner import fetch_data_from_source, transform_payload
     import json
+    import concurrent.futures
     
     with current_app_instance.app_context():
         template = TemplateModel.query.get(template_id)
         if not template:
             return None
         
+        t_dict = template.to_dict()
+        sources = t_dict.get('sources', [])
+        
+        # Backward compatibility
+        if not sources and template.partner_url:
+            sources = [{'name': 'Legacy', 'url': template.partner_url, 'auth_token': template.partner_auth_token}]
+        
         aggregated_data = {}
-        # Fetch from sources
-        for idx, src in enumerate(template.sources):
-            # Same logic as pull_and_push_job
-            url = src.get('url')
-            auth_token = src.get('auth_token')
-            if not url:
-                continue
-                
+
+        def fetch_source_data(idx, src):
+            src_url = src.get('url')
+            src_auth = src.get('auth_token')
+            if not src_url:
+                return {}
+            
+            headers = {}
+            if src_auth:
+                headers['Authorization'] = f"Bearer {src_auth}"
+            
+            local_aggregated = {}
             try:
-                data = fetch_data_from_source(url, auth_token)
-                aggregated_data[f'source_{idx}'] = data
+                res = requests.get(src_url, headers=headers, timeout=10)
+                if res.status_code == 200:
+                    data = res.json()
+                    src_data = data[0] if isinstance(data, list) else data
+                    for k, v in src_data.items():
+                        local_aggregated[f"source_{idx}.{k}"] = v
+                else:
+                    print(f"Pull mode source {idx} ({src_url}) returned {res.status_code}")
             except Exception as e:
-                print(f'Pull mode fetch error on {url}: {e}')
-                # For pull mode, we might want to return partial data or fail
-                aggregated_data[f'source_{idx}'] = {}
-                
-        # Transform payload
-        final_payload = transform_payload(aggregated_data, template.field_mapping)
+                print(f"Pull mode fetch error on {src_url}: {e}")
+                local_aggregated = {}
+            return local_aggregated
+
+        # Launch concurrent requests for all sources
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(len(sources), 1)) as executor:
+            future_to_src = {executor.submit(fetch_source_data, idx, src): idx for idx, src in enumerate(sources)}
+            for future in concurrent.futures.as_completed(future_to_src):
+                local_data = future.result()
+                aggregated_data.update(local_data)
+        
+        # Transform payload using field mapping
+        mapping = t_dict.get('field_mapping', [])
+        if mapping:
+            final_payload = build_nested_payload(mapping, aggregated_data)
+        else:
+            final_payload = aggregated_data
+        
         return final_payload
+
 

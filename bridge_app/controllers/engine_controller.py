@@ -684,9 +684,6 @@ def generate_graphql_schema_from_mapping(field_mapping):
 def pull_endpoint_graphql(template_slug):
     from bridge_app.models.template import TemplateModel
     from flask import request, render_template_string, abort
-    import configparser
-    import os
-    from bridge_app.app import current_app_instance
     
     all_templates = TemplateModel.query.all()
     template = next((t for t in all_templates if t.slug == template_slug), None)
@@ -697,42 +694,9 @@ def pull_endpoint_graphql(template_slug):
         from flask import jsonify
         return jsonify({'error': 'Template is not configured for GraphQL Pull mode'}), 400
         
-    # GET request - serve the IDE
+    # GET request - serve the GraphQL Playground IDE
     if request.method == 'GET':
-        config = configparser.ConfigParser()
-        config.read(os.path.join(current_app_instance.root_path, '..', 'config.ini'))
-        ui_choice = config.get('Server', 'graphql_ui', fallback='native').lower()
-        
-        if ui_choice == 'altair':
-            return render_template_string("""
-            <!doctype html>
-            <html>
-              <head>
-                <meta charset="utf-8">
-                <title>Altair</title>
-                <base href="https://cdn.jsdelivr.net/npm/altair-static/build/dist/">
-                <link rel="stylesheet" href="styles.css">
-              </head>
-              <body>
-                <app-root>
-                  <style>
-                    .loading-screen { display: none; }
-                  </style>
-                  <div class="loading-screen">Loading Altair...</div>
-                </app-root>
-                <script type="text/javascript" src="runtime.js"></script>
-                <script type="text/javascript" src="polyfills.js"></script>
-                <script type="text/javascript" src="main.js"></script>
-                <script>
-                  window.onload = function() {
-                    AltairGraphQL.init();
-                  };
-                </script>
-              </body>
-            </html>
-            """)
-        else:
-            return render_template_string("""
+        return render_template_string("""
             <!DOCTYPE html>
             <html>
             <head>
