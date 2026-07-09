@@ -1,6 +1,6 @@
 # ==================================================================
 # File: build.py
-# Description: 
+# Description: Interactive build script for packaging the Universal API Bridge application using PyInstaller into a standalone executable (OneDir or OneFile).
 # ==================================================================
 
 import os
