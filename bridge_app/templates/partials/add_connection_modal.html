@@ -1,7 +1,7 @@
 <!-- Create Modal -->
 <div x-show="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display: none;">
     <div class="theme-panel p-6 max-w-lg w-full m-4">
-        <h3 class="text-xl font-bold mb-4">Add Swagger Connection</h3>
+        <h3 class="text-xl font-bold mb-4" x-text="newConn.id ? 'Edit Swagger Connection' : 'Add Swagger Connection'"></h3>
         
         <div class="space-y-4">
             <div>
@@ -23,6 +23,9 @@
             </div>
 
             <div x-show="newConn.is_local_file == 'true' || newConn.is_local_file === true">
+                <label class="block text-sm font-medium mb-1">Base API URL <span class="text-red-500">*</span></label>
+                <input type="text" x-model="newConn.url" class="theme-input w-full p-2 mb-3" placeholder="https://api.partner.com">
+                
                 <label class="block text-sm font-medium mb-1">Upload Local File</label>
                 <input type="file" @change="handleFileUpload" accept=".json" class="theme-input w-full p-2 text-sm">
                 <p class="text-xs theme-text-muted mt-1" x-text="newConn.local_file_path ? 'File ready: ' + newConn.local_file_path : ''"></p>

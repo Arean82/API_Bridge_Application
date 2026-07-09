@@ -1,14 +1,15 @@
 document.addEventListener('alpine:init', () => {
-    Alpine.data('templateManager', (templatesData) => ({
-        templates: templatesData || [],
-        showModal: false,
-        mode: 'edit',
+Alpine.data('templateManager', (templatesData, connsLookupData) => ({
+    templates: templatesData || [],
+    connsLookup: connsLookupData || {},
+    showModal: false,
+    mode: 'edit',
         
         templateId: null,
         templateName: '',
         
         sources: [
-            { id: Date.now(), selectedApi: '', url: '', auth_token: '' }
+            { id: Date.now(), connectionId: '', selectedApi: '', url: '', auth_token: '', availableApis: [] }
         ],
         editSource: false,
         
@@ -18,12 +19,10 @@ document.addEventListener('alpine:init', () => {
         
         mappedFields: [],
         
-        availableApis: [],
-        
         get currentApiFields() {
             let allFields = [];
             this.sources.forEach((src, idx) => {
-                let api = this.availableApis.find(a => a.path === src.selectedApi);
+                let api = src.availableApis && src.availableApis.find(a => a.path === src.selectedApi);
                 if (api && api.fields) {
                     api.fields.forEach(f => {
                         allFields.push(`source_${idx}.${f}`);
@@ -40,11 +39,22 @@ document.addEventListener('alpine:init', () => {
         },
         
         addSource() {
-            this.sources.push({ id: Date.now(), selectedApi: '', url: '', auth_token: '' });
+            this.sources.push({ id: Date.now(), connectionId: '', selectedApi: '', url: '', auth_token: '', availableApis: [] });
+            this.fetchApiDocs(this.sources.length - 1);
         },
         
         removeSource(index) {
             this.sources.splice(index, 1);
+        },
+        
+        updateSourceUrl(idx) {
+            let src = this.sources[idx];
+            if (!src.selectedApi) {
+                src.url = '';
+                return;
+            }
+            // Just populate the path. The user can type the origin if needed.
+            src.url = src.selectedApi;
         },
         
         async openEdit(templateId) {
@@ -79,22 +89,28 @@ document.addEventListener('alpine:init', () => {
             if (t.sources && t.sources.length > 0) {
                 this.sources = t.sources.map(s => ({
                     id: Date.now() + Math.random(),
-                    selectedApi: '',
+                    connectionId: s.connectionId || '',
+                    selectedApi: s.selectedApi || '',
                     url: s.url || '',
-                    auth_token: s.auth_token || ''
+                    auth_token: s.auth_token || '',
+                    availableApis: []
                 }));
             } else if (t.partner_url) {
                 this.sources = [{
                     id: Date.now(),
+                    connectionId: '',
                     selectedApi: '',
                     url: t.partner_url,
-                    auth_token: t.partner_auth_token || ''
+                    auth_token: t.partner_auth_token || '',
+                    availableApis: []
                 }];
             } else {
-                this.sources = [{ id: Date.now(), selectedApi: '', url: '', auth_token: '' }];
+                this.sources = [{ id: Date.now(), connectionId: '', selectedApi: '', url: '', auth_token: '', availableApis: [] }];
             }
             
-            await this.fetchApiDocs();
+            for (let i = 0; i < this.sources.length; i++) {
+                await this.fetchApiDocs(i);
+            }
             
             this.$nextTick(() => {
                 if (t.field_mapping) {
@@ -130,18 +146,23 @@ document.addEventListener('alpine:init', () => {
             }
         },
         
-        async fetchApiDocs() {
+        async fetchApiDocs(idx) {
+            let src = this.sources[idx];
+            let url = '/api/docs';
+            if (src.connectionId) {
+                url += `?connection_id=${src.connectionId}`;
+            }
             try {
-                let res = await fetch('/api/docs');
-                this.availableApis = await res.json();
+                let res = await fetch(url);
+                src.availableApis = await res.json();
                 
-                // Match selected APIs based on URLs for cloned data
-                this.sources.forEach(src => {
-                    const match = this.availableApis.find(a => src.url.includes(a.path));
+                // Match selected APIs based on URLs for cloned data if not already set
+                if (!src.selectedApi && src.url) {
+                    const match = src.availableApis.find(a => src.url.includes(a.path));
                     if (match) {
                         src.selectedApi = match.path;
                     }
-                });
+                }
             } catch (e) {
                 console.error("Failed to load API docs", e);
             }
@@ -196,7 +217,9 @@ document.addEventListener('alpine:init', () => {
                 name: this.templateName,
                 sources: this.sources.map(s => ({
                     url: s.url,
-                    auth_token: s.auth_token
+                    auth_token: s.auth_token,
+                    connectionId: s.connectionId,
+                    selectedApi: s.selectedApi
                 })),
                 field_mapping: mappingObj,
                 client_url: this.clientUrl,

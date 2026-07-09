@@ -8,6 +8,17 @@ from bridge_app.services.logger import log_job
 import requests
 from urllib.parse import urlparse
 import re
+import json
+
+def cast_value(val, type_str):
+    if type_str == 'int':
+        try:
+            return int(val)
+        except (ValueError, TypeError):
+            return val
+    elif type_str == 'string':
+        return str(val)
+    return val
 
 def build_nested_payload(mapping, source_data):
     """
@@ -27,6 +38,16 @@ def build_nested_payload(mapping, source_data):
             
         # Get the value from the source data
         value = source_data.get(source_field)
+        
+        # Apply value mapping if present
+        value_mapping = map_item.get('value_mapping')
+        if value_mapping and isinstance(value_mapping, list):
+            for vm in value_mapping:
+                src_val = cast_value(vm.get('source_val'), vm.get('source_type'))
+                # Strict or string comparison
+                if value == src_val or str(value) == str(src_val):
+                    value = cast_value(vm.get('target_val'), vm.get('target_type'))
+                    break
         
         parts = client_path.split('.')
         current = payload
@@ -151,19 +172,54 @@ def pull_and_push_job(app, job_id):
                 dest_headers['Authorization'] = f"Bearer {token}"
 
         # --- 4. Push to Destination ---
+        creds = t_dict.get('client_credentials', {})
+        req_timeout = creds.get('timeout', 30)
+        req_retries = creds.get('retries', 3)
+
+        from requests.adapters import HTTPAdapter
+        from urllib3.util.retry import Retry
+
+        session = requests.Session()
+        retry_strategy = Retry(
+            total=req_retries,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["POST"],
+            backoff_factor=1
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        
         try:
             print(f"Pushing to {template.client_url}")
             if template.client_url:
-                dest_res = requests.post(template.client_url, json=final_payload, headers=dest_headers, timeout=10)
+                dest_res = session.post(template.client_url, json=final_payload, headers=dest_headers, timeout=req_timeout)
                 
                 if dest_res.status_code >= 400:
-                    log_job(job.id, 'FAILED', final_payload, http_status=dest_res.status_code, error_message=dest_res.text)
+                    error_msg = dest_res.text
+                    log_job(job.id, 'FAILED', final_payload, http_status=dest_res.status_code, error_message=error_msg)
+                    
+                    # Queue failed payload
+                    from bridge_app.models.failed_payload import FailedPayload
+                    from bridge_app.extensions import db
+                    fp = FailedPayload(job_id=job.id, template_id=template.id, payload_json=json.dumps(final_payload), error_message=error_msg)
+                    db.session.add(fp)
+                    db.session.commit()
                 else:
                     log_job(job.id, 'SUCCESS', final_payload, http_status=dest_res.status_code)
             else:
                 log_job(job.id, 'FAILED', final_payload, http_status=400, error_message="No client URL defined")
         except Exception as e:
-            log_job(job.id, 'FAILED', final_payload, http_status=500, error_message=str(e))
+            error_msg = str(e)
+            log_job(job.id, 'FAILED', final_payload, http_status=500, error_message=error_msg)
+            
+            # Queue failed payload
+            from bridge_app.models.failed_payload import FailedPayload
+            from bridge_app.extensions import db
+            fp = FailedPayload(job_id=job.id, template_id=template.id, payload_json=json.dumps(final_payload), error_message=error_msg)
+            db.session.add(fp)
+            db.session.commit()
+
 
 def update_swagger_connections(app):
     """
@@ -204,3 +260,23 @@ def update_swagger_connections(app):
                 print(msg)
                 logger.error(msg)
 
+
+def cleanup_failed_payloads(app):
+    """
+    Background job to prune FailedPayload records older than retention_minutes.
+    """
+    with app.app_context():
+        from bridge_app.models.failed_payload import FailedPayload
+        from bridge_app.extensions import db
+        from datetime import datetime, timedelta
+        
+        retention_minutes = app.config.get('RETRY_QUEUE_RETENTION_MINUTES', 60)
+        cutoff_time = datetime.utcnow() - timedelta(minutes=retention_minutes)
+        
+        try:
+            deleted_count = FailedPayload.query.filter(FailedPayload.timestamp < cutoff_time).delete()
+            db.session.commit()
+            if deleted_count > 0:
+                print(f"Cleaned up {deleted_count} expired failed payloads.")
+        except Exception as e:
+            print(f"Failed to cleanup payloads: {e}")

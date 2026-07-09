@@ -7,3 +7,4 @@ from .template import TemplateModel
 from .job import JobModel
 from .job_log import JobLog
 from .swagger_connection import SwaggerConnection
+from .failed_payload import FailedPayload

@@ -9,6 +9,60 @@ from bridge_app.models import TemplateModel, JobModel
 from bridge_app.extensions import db, scheduler
 from bridge_app.services.task_runner import pull_and_push_job
 
+def fix_swagger_urls(data, source_url):
+    from urllib.parse import urlparse
+    import json
+    import re
+    
+    parsed = urlparse(source_url)
+    base_url = f"{parsed.scheme}://{parsed.netloc}"
+    
+    if 'servers' in data:
+        for server in data['servers']:
+            if server.get('url', '').startswith('/'):
+                server['url'] = base_url + server['url']
+    elif 'host' not in data:
+        data['host'] = parsed.netloc
+        if 'schemes' not in data:
+            data['schemes'] = [parsed.scheme]
+            
+    if 'info' in data and isinstance(data['info'], dict) and data['info'].get('description'):
+        import re
+        # Replace relative markdown links like `](/open-api...)` with absolute ones `](https://base_url/open-api...)`
+        data['info']['description'] = re.sub(r'\]\(/', f']({base_url}/', data['info']['description'])
+        # Rename the confusing text link from "[Try it out]" to "[API Documentation]"
+        data['info']['description'] = data['info']['description'].replace('[Try it out]', '[API Documentation]')
+        
+    return json.dumps(data)
+
+def fetch_swagger_json(url):
+    import requests
+    import re
+    from urllib.parse import urljoin
+    import json
+    
+    resp = requests.get(url, timeout=10)
+    if not resp.ok:
+        raise ValueError(f"HTTP {resp.status_code}")
+        
+    try:
+        data = resp.json()
+        return fix_swagger_urls(data, url), url
+    except Exception:
+        html = resp.text
+        match = re.search(r'url:\s*["\']([^"\']+)["\']', html)
+        if match:
+            json_url = urljoin(url, match.group(1))
+            resp2 = requests.get(json_url, timeout=10)
+            if not resp2.ok:
+                raise ValueError(f"Extracted JSON URL {json_url} but got HTTP {resp2.status_code}")
+            try:
+                data = resp2.json()
+                return fix_swagger_urls(data, json_url), json_url
+            except Exception:
+                pass
+        raise ValueError("URL does not return valid JSON and no Swagger URL could be extracted.")
+
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 @api_bp.route('/templates', methods=['GET'])
@@ -186,14 +240,8 @@ def get_api_docs():
                 except:
                     pass
 
-    # Fallback to local sample if no docs loaded yet
     if not docs:
-        doc_path = os.path.join(current_app.root_path, '..', 'sample', 'api-docs.json')
-        try:
-            with open(doc_path, 'r') as f:
-                docs = json.load(f)
-        except Exception as e:
-            return jsonify({'error': str(e)}), 500
+        return jsonify([]), 200
             
     try:
             
@@ -278,18 +326,36 @@ def add_connection():
     )
     
     # Fetch initial JSON if URL provided
+    error_message = None
     if conn.url and not conn.is_local_file:
         try:
-            resp = requests.get(conn.url, timeout=10)
-            if resp.ok:
-                conn.json_content = resp.text
+            json_text, actual_url = fetch_swagger_json(conn.url)
+            conn.json_content = json_text
+            conn.is_active = True
+        except ValueError as e:
+            conn.is_active = False
+            error_message = f"Failed to fetch Swagger JSON: {str(e)}"
         except Exception as e:
-            # We save it anyway, APScheduler will retry later
-            pass
+            conn.is_active = False
+            error_message = f"Failed to fetch Swagger JSON: {str(e)}"
+    elif conn.is_local_file and conn.json_content:
+        if conn.url:
+            try:
+                import json
+                data = json.loads(conn.json_content)
+                conn.json_content = fix_swagger_urls(data, conn.url)
+            except Exception:
+                pass
+        conn.is_active = True
 
     db.session.add(conn)
     db.session.commit()
-    return jsonify(conn.to_dict())
+    
+    res = conn.to_dict()
+    if error_message:
+        res["warning"] = error_message
+        
+    return jsonify(res)
 
 @api_bp.route('/connections/<int:id>', methods=['DELETE'])
 def delete_connection(id):
@@ -299,6 +365,105 @@ def delete_connection(id):
     db.session.delete(conn)
     db.session.commit()
     return jsonify({"status": "deleted"})
+
+@api_bp.route('/connections/<int:id>', methods=['PUT'])
+def update_connection(id):
+    from bridge_app.models import SwaggerConnection
+    from bridge_app.extensions import db
+    import requests
+    from datetime import datetime
+    
+    conn = SwaggerConnection.query.get_or_404(id)
+    data = request.json
+    
+    conn.name = data.get('name', conn.name)
+    conn.url = data.get('url', conn.url)
+    conn.is_local_file = data.get('is_local_file', conn.is_local_file)
+    conn.local_file_path = data.get('local_file_path', conn.local_file_path)
+    if data.get('json_content'):
+        conn.json_content = data.get('json_content')
+        conn.last_updated = datetime.utcnow()
+        
+    error_message = None
+    if conn.url and not conn.is_local_file:
+        try:
+            json_text, actual_url = fetch_swagger_json(conn.url)
+            conn.json_content = json_text
+            conn.last_updated = datetime.utcnow()
+            conn.is_active = True
+        except ValueError as e:
+            conn.is_active = False
+            error_message = f"Failed to fetch Swagger JSON: {str(e)}"
+        except Exception as e:
+            conn.is_active = False
+            error_message = f"Failed to fetch Swagger JSON: {str(e)}"
+    elif conn.is_local_file and conn.json_content:
+        if conn.url:
+            try:
+                import json
+                data = json.loads(conn.json_content)
+                conn.json_content = fix_swagger_urls(data, conn.url)
+            except Exception:
+                pass
+        conn.is_active = True
+        conn.last_updated = datetime.utcnow()
+
+    db.session.commit()
+    
+    res = conn.to_dict()
+    if error_message:
+        res["warning"] = error_message
+        
+    return jsonify(res)
+
+@api_bp.route('/connections/<int:id>/refresh', methods=['POST'])
+def refresh_connection(id):
+    from bridge_app.models import SwaggerConnection
+    from bridge_app.extensions import db
+    import requests
+    from datetime import datetime
+    
+    conn = SwaggerConnection.query.get_or_404(id)
+    if conn.is_local_file:
+        return jsonify({"error": "Cannot refresh local file connections from a URL."}), 400
+        
+    try:
+        json_text, actual_url = fetch_swagger_json(conn.url)
+        conn.json_content = json_text
+        conn.last_updated = datetime.utcnow()
+        db.session.commit()
+        return jsonify(conn.to_dict())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@api_bp.route('/connections/<int:id>/toggle', methods=['POST'])
+def toggle_connection(id):
+    from bridge_app.models import SwaggerConnection
+    from bridge_app.extensions import db
+    import requests
+    from datetime import datetime
+    
+    conn = SwaggerConnection.query.get_or_404(id)
+    data = request.json
+    target_state = data.get('is_active', not conn.is_active)
+    
+    if target_state == True and not conn.is_local_file:
+        # Trying to enable. Must fetch docs first to ensure it's valid.
+        try:
+            json_text, actual_url = fetch_swagger_json(conn.url)
+            conn.json_content = json_text
+            conn.last_updated = datetime.utcnow()
+            conn.is_active = True
+        except Exception as e:
+            # Failed to fetch, keep it disabled
+            conn.is_active = False
+            db.session.commit()
+            return jsonify({"error": f"Failed to fetch Swagger JSON: {str(e)}. Connection remains disabled."}), 400
+    else:
+        conn.is_active = target_state
+        
+    db.session.commit()
+    return jsonify(conn.to_dict())
 
 @api_bp.route('/save_config', methods=['POST'])
 def save_config():

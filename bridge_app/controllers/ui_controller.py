@@ -9,6 +9,26 @@ from bridge_app.models import TemplateModel, JobModel, JobLog
 
 ui_bp = Blueprint('ui', __name__)
 
+@ui_bp.route('/jobs')
+def jobs_page():
+    return render_template('jobs.html')
+
+@ui_bp.route('/docs/<int:id>')
+def swagger_docs(id):
+    from bridge_app.models import SwaggerConnection
+    from bridge_app.controllers.engine_controller import fix_swagger_urls
+    import json
+    conn = SwaggerConnection.query.get_or_404(id)
+    
+    if conn.json_content and conn.url:
+        try:
+            data = json.loads(conn.json_content)
+            conn.json_content = fix_swagger_urls(data, conn.url)
+        except Exception:
+            pass
+            
+    return render_template('swagger_ui.html', conn=conn)
+
 @ui_bp.route('/')
 def index():
     return render_template('index.html')
@@ -34,8 +54,14 @@ def create_template_page():
 def templates_page():
     templates = TemplateModel.query.all()
     
+    from bridge_app.models import SwaggerConnection
+    connections = SwaggerConnection.query.all()
+    conns_lookup = {str(c.id): c.name for c in connections}
+    
     import json
     templates_json = json.dumps([t.to_dict() for t in templates])
+    conns_lookup_json = json.dumps(conns_lookup)
+    return render_template('templates.html', templates=templates, templates_json=templates_json, conns_lookup_json=conns_lookup_json)
     
 @ui_bp.route('/connections')
 def connections_page():

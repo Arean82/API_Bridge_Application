@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Swagger UI - {{ conn.name }}</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
+    <style>
+      html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
+      *, *:before, *:after { box-sizing: inherit; }
+      body { margin:0; background: #fafafa; }
+      .topbar { display: none !important; }
+    </style>
+</head>
+<body>
+    <div id="swagger-ui"></div>
+    <script id="swagger-data" type="application/json">
+        {{ conn.json_content | safe }}
+    </script>
+    <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js" crossorigin></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-standalone-preset.js" crossorigin></script>
+    <script>
+        window.onload = function() {
+            let spec = null;
+            try {
+                // Parse the JSON content injected by the server
+                const swaggerData = document.getElementById('swagger-data').textContent;
+                spec = JSON.parse(swaggerData);
+                
+                // Dynamically fix URLs in the frontend so it works instantly without a server restart
+                const baseUrl = "{{ conn.url }}";
+                if (baseUrl) {
+                    try {
+                        const parsedUrl = new URL(baseUrl);
+                        const baseOrigin = parsedUrl.origin;
+                        
+                        if (spec.servers) {
+                            spec.servers.forEach(server => {
+                                if (server.url && server.url.startsWith('/')) {
+                                    server.url = baseOrigin + server.url;
+                                }
+                            });
+                        } else if (!spec.host) {
+                            spec.host = parsedUrl.host;
+                            if (!spec.schemes) {
+                                spec.schemes = [parsedUrl.protocol.replace(':', '')];
+                            }
+                        }
+                        
+                        // Fix relative markdown links in description
+                        if (spec.info && spec.info.description) {
+                            spec.info.description = spec.info.description.replace(/\]\(\//g, '](' + baseOrigin + '/');
+                            spec.info.description = spec.info.description.replace('[Try it out]', '[API Documentation]');
+                        }
+                    } catch (err) {
+                        console.warn("Failed to rewrite base URLs dynamically:", err);
+                    }
+                }
+            } catch(e) {
+                console.error("Failed to parse Swagger JSON content", e);
+                document.getElementById('swagger-ui').innerHTML = "<h2 style='color:red; text-align:center; padding: 20px;'>Failed to load Swagger JSON. Is the JSON valid?</h2>";
+                return;
+            }
+
+            const ui = SwaggerUIBundle({
+                spec: spec,
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "BaseLayout"
+            });
+            window.ui = ui;
+        };
+    </script>
+</body>
+</html>

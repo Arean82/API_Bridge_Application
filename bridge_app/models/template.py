@@ -52,5 +52,5 @@ class TemplateModel(db.Model):
             'client_auth_type': self.client_auth_type,
             'client_credentials': json.loads(self.client_credentials_json or '{}'),
             'field_mapping': json.loads(self.field_mapping_json or '{}'),
-            'created_at': self.created_at.isoformat()
+            'created_at': self.created_at.isoformat() + "Z"
         }

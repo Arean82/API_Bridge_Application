@@ -4,7 +4,7 @@
 <div x-data="connectionsManager()" class="max-w-4xl mx-auto space-y-6">
     <div class="flex justify-between items-center">
         <h2 class="text-3xl font-bold">Swagger Connections</h2>
-        <button @click="showModal = true" class="theme-btn px-4 py-2 text-sm">
+        <button @click="newConn = {name: '', url: '', is_local_file: false, local_file_path: ''}; showModal = true" class="theme-btn px-4 py-2 text-sm">
             + New Connection
         </button>
     </div>
@@ -19,17 +19,44 @@
             <template x-for="conn in connections" :key="conn.id">
                 <div class="border border-gray-200 dark:border-gray-700 rounded p-4 flex justify-between items-center">
                     <div>
-                        <h3 class="font-bold text-lg" x-text="conn.name"></h3>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-bold text-lg" x-text="conn.name"></h3>
+                            <span x-show="!conn.is_active" class="bg-red-100 text-red-800 text-xs font-semibold px-2 py-0.5 rounded border border-red-200">Disabled</span>
+                        </div>
                         <p class="text-sm theme-text-muted mt-1" x-text="conn.is_local_file ? 'Local File: ' + conn.local_file_path : 'URL: ' + conn.url"></p>
                         <p class="text-xs mt-1" x-text="'Last Updated: ' + (conn.last_updated ? new Date(conn.last_updated).toLocaleString() : 'Never')"></p>
                     </div>
-                    <button @click="deleteConnection(conn.id)" class="text-red-500 hover:text-red-700 font-bold px-3 py-1 bg-red-100 dark:bg-red-900 rounded">
-                        Delete
-                    </button>
+                    <div class="flex items-center gap-4">
+                        <!-- Status Toggle -->
+                        <div class="flex items-center gap-2 border-r border-gray-300 dark:border-gray-600 pr-4">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer" :checked="conn.is_active" @change="toggleConnection(conn)">
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-green-500"></div>
+                            </label>
+                            <span class="text-sm font-medium theme-text-muted" x-text="conn.is_active ? 'Active' : 'Inactive'"></span>
+                        </div>
+                        <template x-if="!conn.is_local_file">
+                            <button @click="refreshConnection(conn.id)" class="text-blue-500 hover:text-blue-700 font-bold px-3 py-1 bg-blue-100 dark:bg-blue-900 rounded">
+                                Refresh
+                            </button>
+                        </template>
+                        <a :href="'/docs/' + conn.id" target="_blank" class="text-green-500 hover:text-green-700 font-bold px-3 py-1 bg-green-100 dark:bg-green-900 rounded inline-block">
+                            Test API
+                        </a>
+                        <button @click="editConnection(conn)" class="text-indigo-500 hover:text-indigo-700 font-bold px-3 py-1 bg-indigo-100 dark:bg-indigo-900 rounded">
+                            Edit
+                        </button>
+                        <button @click="deleteConnection(conn.id)" class="text-red-500 hover:text-red-700 font-bold px-3 py-1 bg-red-100 dark:bg-red-900 rounded">
+                            Delete
+                        </button>
+                    </div>
                 </div>
             </template>
         </div>
     </div>
+
+    <!-- Loading Modal Partial -->
+    {% include 'partials/loading_modal.html' %}
 
     <!-- Create Modal (Partial) -->
     {% include 'partials/add_connection_modal.html' %}
@@ -49,6 +76,8 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('connectionsManager', () => ({
         connections: conns,
         showModal: false,
+        isSaving: false,
+        loadingMessage: 'Loading...',
         loading: false,
         newConn: {
             name: '',
@@ -67,27 +96,114 @@ document.addEventListener('alpine:init', () => {
             };
             reader.readAsText(file);
         },
+        editConnection(conn) {
+            this.newConn = {
+                id: conn.id,
+                name: conn.name,
+                url: conn.url,
+                is_local_file: conn.is_local_file,
+                local_file_path: conn.local_file_path,
+                json_content: conn.json_content
+            };
+            this.showModal = true;
+        },
+        async refreshConnection(id) {
+            this.loading = true;
+            try {
+                const res = await fetch('/api/connections/' + id + '/refresh', {method: 'POST'});
+                if (!res.ok) {
+                    const err = await res.json();
+                    alert(err.error || "Failed to refresh");
+                    this.loading = false;
+                    return;
+                }
+                const updated = await res.json();
+                this.connections = this.connections.map(c => c.id === id ? updated : c);
+            } catch(e) {
+                alert("Error refreshing connection");
+            }
+            this.loading = false;
+        },
         async saveConnection() {
             if (!this.newConn.name) {
                 alert("Name is required"); return;
             }
             this.newConn.is_local_file = (this.newConn.is_local_file === 'true' || this.newConn.is_local_file === true);
             
-            this.loading = true;
+            if (!this.newConn.url) {
+                alert("Base API URL is required to resolve paths correctly."); return;
+            }
+            
+            this.isSaving = true;
+            this.loadingMessage = "Saving connection and fetching Swagger JSON...";
             try {
-                const res = await fetch('/api/connections', {
-                    method: 'POST',
+                let url = '/api/connections';
+                let method = 'POST';
+                if (this.newConn.id) {
+                    url += '/' + this.newConn.id;
+                    method = 'PUT';
+                }
+                
+                const res = await fetch(url, {
+                    method: method,
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(this.newConn)
                 });
+                if (!res.ok) {
+                    const err = await res.json();
+                    alert(err.error || "Failed to save connection");
+                    this.isSaving = false;
+                    return;
+                }
                 const saved = await res.json();
-                this.connections.push(saved);
+                
+                if (saved.warning) {
+                    alert("Connection saved but disabled: " + saved.warning);
+                }
+                
+                if (method === 'POST') {
+                    this.connections.push(saved);
+                } else {
+                    this.connections = this.connections.map(c => c.id === saved.id ? saved : c);
+                }
                 this.showModal = false;
                 this.newConn = {name: '', url: '', is_local_file: false, local_file_path: ''};
             } catch (e) {
                 alert("Error saving connection");
             }
-            this.loading = false;
+            this.isSaving = false;
+        },
+        async toggleConnection(conn) {
+            const originalState = conn.is_active;
+            const targetState = !originalState;
+            
+            // Optimistically update UI toggle state so the switch moves immediately
+            conn.is_active = targetState;
+            
+            this.isSaving = true;
+            this.loadingMessage = targetState ? "Verifying and enabling connection..." : "Disabling connection...";
+            
+            try {
+                const res = await fetch('/api/connections/' + conn.id + '/toggle', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ is_active: targetState })
+                });
+                
+                if (!res.ok) {
+                    const err = await res.json();
+                    alert(err.error || "Failed to toggle connection state");
+                    // Revert the toggle on failure
+                    conn.is_active = originalState;
+                } else {
+                    const updated = await res.json();
+                    this.connections = this.connections.map(c => c.id === updated.id ? updated : c);
+                }
+            } catch (e) {
+                alert("Error toggling connection");
+                conn.is_active = originalState;
+            }
+            this.isSaving = false;
         },
         async deleteConnection(id) {
             if(!confirm("Are you sure you want to delete this connection?")) return;

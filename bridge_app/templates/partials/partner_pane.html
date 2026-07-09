@@ -26,7 +26,7 @@
                         <label class="block text-sm font-medium mb-1">Swagger Connection</label>
                         <select x-model="src.connectionId" @change="fetchApiDocs(idx)"
                             class="theme-input w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="">-- Local Sample Docs --</option>
+                            <option value="">-- Select Connection --</option>
                             <template x-for="conn in swaggerConnections" :key="conn.id">
                                 <option :value="conn.id" x-text="conn.name"></option>
                             </template>

@@ -26,7 +26,7 @@ class JobLog(db.Model):
         return {
             "id": self.id,
             "job_id": self.job_id,
-            "timestamp": self.timestamp.isoformat(),
+            "timestamp": self.timestamp.isoformat() + "Z",
             "status": self.status,
             "http_status": self.http_status,
             "error_message": self.error_message,

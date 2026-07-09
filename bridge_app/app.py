@@ -47,7 +47,11 @@ def create_app(config_class=Config):
     from bridge_app.config import get_theme
     @app.context_processor
     def inject_theme():
-        return dict(current_theme=get_theme())
+        return dict(
+            current_theme=get_theme(),
+            app_timezone=app.config.get('APP_TIMEZONE', 'UTC'),
+            ui_date_format=app.config.get('UI_DATE_FORMAT', 'DD/MM/YYYY HH:mm:ss')
+        )
 
     # Create tables and schedule jobs
     with app.app_context():
@@ -67,13 +71,28 @@ def create_app(config_class=Config):
                 replace_existing=True
             )
             
-        # Schedule the background update for Swagger connections (e.g., every 1 hour)
+        # Schedule the background update for Swagger connections
+        interval = app.config.get('SWAGGER_REFRESH_INTERVAL', 1)
+        unit = app.config.get('SWAGGER_REFRESH_UNIT', 'hours')
+        trigger_kwargs = {unit: interval}
+        
         scheduler.add_job(
             id='swagger_updater',
             func=update_swagger_connections,
             args=[app],
             trigger='interval',
-            hours=1,
+            replace_existing=True,
+            **trigger_kwargs
+        )
+
+        from bridge_app.services.task_runner import cleanup_failed_payloads
+        # Schedule the background cleanup for failed payloads (e.g., every 5 minutes)
+        scheduler.add_job(
+            id='failed_payloads_cleanup',
+            func=cleanup_failed_payloads,
+            args=[app],
+            trigger='interval',
+            minutes=5,
             replace_existing=True
         )
 

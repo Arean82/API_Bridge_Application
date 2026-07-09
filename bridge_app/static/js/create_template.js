@@ -8,6 +8,9 @@ document.addEventListener('alpine:init', () => {
         showTestModal: false,
         testPayloadJSON: '',
 
+        showValueMappingModal: false,
+        activeMappingIndex: null,
+
         fullLeft: false,
         fullRight: false,
 
@@ -50,14 +53,17 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
             let conn = this.swaggerConnections.find(c => c.id == src.connectionId);
-            let base = conn && conn.url ? new URL(conn.url).origin : 'https://app.avlview.com';
-            if (base.endsWith('/')) base = base.slice(0, -1);
-            src.url = base + '/open-api' + src.selectedApi;
+            let base = conn && conn.url ? new URL(conn.url).origin : '';
+            if (base && base.endsWith('/')) base = base.slice(0, -1);
+            src.url = base + src.selectedApi;
         },
 
         clientUrl: '',
         clientAuthType: 'none',
         clientAuthToken: '',
+
+        clientTimeout: 30,
+        clientRetries: 3,
 
         mappedFields: [],
         scheduleInterval: 60,
@@ -77,10 +83,15 @@ document.addEventListener('alpine:init', () => {
                     try {
                         const creds = JSON.parse(cloneData.client_credentials_json);
                         this.clientAuthToken = creds.token || '';
+                        this.clientTimeout = creds.timeout || 30;
+                        this.clientRetries = creds.retries !== undefined ? creds.retries : 3;
                     } catch(e) {}
                 } else if (cloneData.client_credentials) {
                     this.clientAuthToken = cloneData.client_credentials.token || '';
+                    this.clientTimeout = cloneData.client_credentials.timeout || 30;
+                    this.clientRetries = cloneData.client_credentials.retries !== undefined ? cloneData.client_credentials.retries : 3;
                 }
+                
                 if (cloneData.sources && cloneData.sources.length > 0) {
                     this.sources = cloneData.sources.map(s => ({
                         id: Date.now() + Math.random(),
@@ -103,17 +114,30 @@ document.addEventListener('alpine:init', () => {
 
                 if (cloneData.field_mapping) {
                     this.$nextTick(() => {
-                        Object.entries(cloneData.field_mapping).forEach(([source_field, client_name], i) => {
-                            let sf = source_field;
-                            if (!sf.startsWith('source_')) {
-                                sf = `source_0.${sf}`;
-                            }
-                            this.mappedFields.push({
-                                id: Date.now() + i,
-                                source_field: sf,
-                                client_name: client_name
+                        if (Array.isArray(cloneData.field_mapping)) {
+                            cloneData.field_mapping.forEach((mapping, i) => {
+                                this.mappedFields.push({
+                                    id: Date.now() + i,
+                                    source_field: mapping.source || '',
+                                    client_name: mapping.target || '',
+                                    value_mapping: mapping.value_mapping || []
+                                });
                             });
-                        });
+                        } else {
+                            // Legacy format mapping
+                            Object.entries(cloneData.field_mapping).forEach(([source_field, client_name], i) => {
+                                let sf = source_field;
+                                if (!sf.startsWith('source_')) {
+                                    sf = `source_0.${sf}`;
+                                }
+                                this.mappedFields.push({
+                                    id: Date.now() + i,
+                                    source_field: sf,
+                                    client_name: client_name,
+                                    value_mapping: []
+                                });
+                            });
+                        }
                     });
                 }
             }
@@ -164,8 +188,28 @@ document.addEventListener('alpine:init', () => {
             this.mappedFields.push({
                 id: Date.now() + Math.random().toString(),
                 source_field: '',
-                client_name: ''
+                client_name: '',
+                value_mapping: []
             });
+        },
+        
+        openValueMapping(index) {
+            this.activeMappingIndex = index;
+            if (!this.mappedFields[index].value_mapping) {
+                this.mappedFields[index].value_mapping = [];
+            }
+            this.showValueMappingModal = true;
+        },
+        
+        addValueMappingRow() {
+            if (this.activeMappingIndex !== null) {
+                this.mappedFields[this.activeMappingIndex].value_mapping.push({
+                    source_val: '',
+                    source_type: 'string',
+                    target_val: '',
+                    target_type: 'string'
+                });
+            }
         },
 
         removeFieldRow(index) {
@@ -220,13 +264,16 @@ document.addEventListener('alpine:init', () => {
                     })),
                     client_url: this.clientUrl,
                     client_auth_type: this.clientAuthType,
-                    client_credentials: this.clientAuthType === 'bearer' ? { token: this.clientAuthToken } : {},
-                    field_mapping: this.mappedFields.reduce((acc, f) => {
-                        if (f.source_field && f.client_name) {
-                            acc[f.client_name] = f.source_field;
-                        }
-                        return acc;
-                    }, {})
+                    client_credentials: {
+                        token: this.clientAuthType === 'bearer' ? this.clientAuthToken : null,
+                        timeout: parseInt(this.clientTimeout) || 30,
+                        retries: parseInt(this.clientRetries) || 3
+                    },
+                    field_mapping: this.mappedFields.map(f => ({
+                        source: f.source_field,
+                        target: f.client_name,
+                        value_mapping: f.value_mapping || []
+                    })).filter(f => f.source && f.target)
                 };
 
                 const response = await fetch('/api/templates', {

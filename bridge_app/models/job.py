@@ -30,7 +30,8 @@ class JobModel(db.Model):
             'template_name': self.template.name if self.template else None,
             'schedule_interval': self.schedule_interval,
             'is_active': self.is_active,
-            'last_run': self.last_run.isoformat() if self.last_run else None,
+            'last_run': self.last_run.isoformat() + "Z" if self.last_run else None,
+            'next_run': None,  # Can be calculated or omitted
             'last_status': self.last_status,
-            'created_at': self.created_at.isoformat()
+            'created_at': self.created_at.isoformat() + "Z"
         }

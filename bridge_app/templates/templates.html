@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div x-data="templateManager({{ templates_json }})" class="h-full flex flex-col relative">
+<div x-data="templateManager({{ templates_json }}, {{ conns_lookup_json | default('{}') }})" class="h-full flex flex-col relative">
     <!-- Header -->
     <div class="flex justify-between items-center mb-8">
         <div>
@@ -22,6 +22,7 @@
                     <th class="p-4 w-16" style="border-top-left-radius: inherit;">ID</th>
                     <th class="p-4">Template Name</th>
                     <th class="p-4">Total Fields Mapped</th>
+                    <th class="p-4">Connections Used</th>
                     <th class="p-4 text-right" style="border-top-right-radius: inherit;">Actions</th>
                 </tr>
             </thead>
@@ -33,6 +34,22 @@
                     <td class="p-4 theme-text-muted">
                         <!-- We cannot easily get dictionary length in jinja without a filter, so we just show mapped -->
                         Mapped
+                    </td>
+                    <td class="p-4">
+                        <template x-data="{ t: templates.find(x => x.id === {{ template.id }}) }">
+                            <div class="flex flex-wrap gap-1">
+                                <template x-if="t && t.sources && t.sources.length > 0">
+                                    <template x-for="src in t.sources" :key="Math.random()">
+                                        <template x-if="src.connectionId">
+                                            <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2 py-0.5 rounded border border-indigo-200"
+                                                  x-text="connsLookup[src.connectionId] || 'Unknown'">
+                                            </span>
+                                        </template>
+                                    </template>
+                                </template>
+                                <span x-show="!t || !t.sources || !t.sources.some(s => s.connectionId)" class="text-sm theme-text-muted">None</span>
+                            </div>
+                        </template>
                     </td>
                     <td class="p-4 text-right space-x-2">
                         <button @click="openEdit({{ template.id }})"
@@ -123,13 +140,25 @@
 
                             <div class="grid grid-cols-2 gap-4">
                                 <div class="col-span-2">
-                                    <label class="block text-sm font-medium mb-1">Select API Endpoint</label>
-                                    <select x-model="src.selectedApi"
-                                        @change="src.url = src.selectedApi ? ('https://app.avlview.com/open-api' + src.selectedApi) : ''"
+                                    <label class="block text-sm font-medium mb-1">Swagger Connection</label>
+                                    <select x-model="src.connectionId" @change="fetchApiDocs(idx)"
                                         :disabled="!editSource" class="theme-input w-full p-2.5 text-sm"
                                         :class="{'bg-gray-50 cursor-not-allowed': !editSource}">
+                                        <option value="">-- Select Connection --</option>
+                                        <template x-for="(name, id) in connsLookup" :key="id">
+                                            <option :value="id" x-text="name"></option>
+                                        </template>
+                                    </select>
+                                </div>
+
+                                <div class="col-span-2">
+                                    <label class="block text-sm font-medium mb-1">Select API Endpoint</label>
+                                    <select x-model="src.selectedApi"
+                                        @change="updateSourceUrl(idx)"
+                                        :disabled="!editSource || !src.availableApis || src.availableApis.length === 0" class="theme-input w-full p-2.5 text-sm"
+                                        :class="{'bg-gray-50 cursor-not-allowed': !editSource}">
                                         <option value="">-- Choose API --</option>
-                                        <template x-for="api in availableApis" :key="api.path">
+                                        <template x-for="api in src.availableApis" :key="api.path">
                                             <option :value="api.path" x-text="api.name + ' (' + api.path + ')'">
                                             </option>
                                         </template>
