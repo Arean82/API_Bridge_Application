@@ -1,49 +1,49 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="h-full flex flex-col" x-data='createTemplate({{ clone_data | safe if clone_data else "null" }}, {{ conns_json | safe }})'>
+<div id="createTemplateContainer" class="h-full flex flex-col" data-clone="{{ clone_data | forceescape if clone_data else 'null' }}" data-conns="{{ conns_json | forceescape }}">
     <div class="flex justify-between items-start mb-6">
         <div>
-            <h2 class="text-3xl font-bold" x-text="templateName ? 'Edit ' + templateName : 'Create New Template'">Create New Template</h2>
+            <h2 id="pageTitle" class="text-3xl font-bold">Create New Template</h2>
             <p class="theme-text-muted">Configure a reusable template for your feeds.</p>
         </div>
         <div class="flex flex-col items-end gap-3">
             <div class="flex items-center gap-4">
-                <input type="text" x-model="clientName" required class="theme-input shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-2" placeholder="Client Name (e.g. Acme)">
-                <input type="text" x-model="templateName" required class="theme-input shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-2" placeholder="Template Name">
+                <input type="text" id="clientName" required class="theme-input shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-2" placeholder="Client Name (e.g. Acme)">
+                <input type="text" id="templateName" required class="theme-input shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-2" placeholder="Template Name">
                 
-                <button type="button" @click="testMapping" class="border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-md hover:bg-black/10 transition font-medium">
+                <button type="button" id="testMappingBtn" class="border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-md hover:bg-black/10 transition font-medium">
                     Test Mapping
                 </button>
                 
-                <button @click="submitForm" class="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition font-medium disabled:opacity-50" :disabled="isSubmitting || !templateName || !clientName">
-                    <span x-show="!isSubmitting">Save</span>
-                    <span x-show="isSubmitting">Saving...</span>
+                <button id="saveBtn" class="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition font-medium disabled:opacity-50" disabled>
+                    <span id="saveBtnText">Save</span>
                 </button>
             </div>
             <div class="flex items-center gap-2">
-                <input type="checkbox" id="scheduleImmediately" x-model="scheduleImmediately" class="w-4 h-4 text-indigo-600 rounded border-gray-300">
+                <input type="checkbox" id="scheduleImmediately" class="w-4 h-4 text-indigo-600 rounded border-gray-300">
                 <label for="scheduleImmediately" class="text-sm font-medium">Schedule Immediately</label>
             </div>
         </div>
     </div>
-    
-    <!-- Test Result Modal (Hidden by default) -->
-    <div x-show="showTestModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" style="display: none;">
-        <div class="theme-panel rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[80vh] flex flex-col" @click.away="showTestModal = false">
+
+    <!-- Test Result Modal -->
+    <div id="testModal" class="fixed inset-0 [background:var(--overlay-bg)] [backdrop-filter:var(--backdrop)] z-50 flex items-center justify-center p-4" style="display: none;">
+        <div class="theme-panel rounded-xl shadow-xl max-w-xl w-full p-6 max-h-[80vh] flex flex-col relative">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-xl font-bold">Test Mapping Payload</h3>
-                <button @click="showTestModal = false" class="theme-text-muted hover:opacity-75 text-2xl">&times;</button>
+                <button id="closeTestModalBtn" class="theme-text-muted hover:opacity-75 text-2xl">&times;</button>
             </div>
             <div class="flex-1 overflow-y-auto bg-black/5 dark:bg-black/20 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                <pre class="text-sm font-mono whitespace-pre-wrap" x-text="testPayloadJSON"></pre>
+                <pre id="testPayloadPre" class="text-sm font-mono whitespace-pre-wrap"></pre>
             </div>
         </div>
     </div>
 
-    <div x-show="message" class="mb-4 p-4 rounded"
-        :class="isError ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'" x-text="message"
-        style="display: none;"></div>
+    <div id="statusMessage" class="mb-4 p-4 rounded" style="display: none;"></div>
+
+    <!-- Enlarge Backdrop -->
+    <div id="fullPaneBackdrop" class="fixed inset-0 [backdrop-filter:var(--backdrop)] [background:var(--overlay-bg)] z-40" style="display: none;"></div>
 
     <!-- 2 Panes Layout -->
     <div class="flex flex-1 gap-6 min-h-0">
@@ -56,5 +56,5 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-<script src="{{ url_for('static', filename='js/create_template.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='js/create_template.js') }}"></script>
 {% endblock %}

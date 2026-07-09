@@ -79,38 +79,45 @@ def build_nested_payload(mapping, source_data):
                     
     return payload
 
-def pull_and_push_job(app, job_id):
-    """
-    Core engine logic for universal dynamic mapping from multiple sources.
-    """
-    with app.app_context():
+def pull_and_push_job(job_id):
+    from bridge_app.app import current_app_instance
+    if not current_app_instance:
+        from bridge_app.app import create_app
+        current_app_instance = create_app()
+    with current_app_instance.app_context():
+        """
+        Core engine logic for universal dynamic mapping from multiple sources.
+        """
         job = JobModel.query.get(job_id)
         if not job or not job.is_active or not job.template:
             return
-            
+        
         template = job.template
         t_dict = template.to_dict()
         print(f"Starting job {job_id} for template {template.name}")
-        
+    
         # --- 1. Fetch from Source APIs ---
         sources = t_dict.get('sources', [])
-        
+    
         # Backward compatibility
         if not sources and template.partner_url:
             sources = [{'name': 'Legacy', 'url': template.partner_url, 'auth_token': template.partner_auth_token}]
-            
-        aggregated_data = {}
         
-        for idx, src in enumerate(sources):
+        aggregated_data = {}
+    
+        import concurrent.futures
+
+        def fetch_source_data(idx, src):
             src_url = src.get('url')
             src_auth = src.get('auth_token')
             if not src_url:
-                continue
-                
+                return {}
+            
             headers = {}
             if src_auth:
                 headers['Authorization'] = f"Bearer {src_auth}"
-                
+            
+            local_aggregated = {}
             try:
                 res = requests.get(src_url, headers=headers, timeout=10)
                 if res.status_code == 200:
@@ -118,7 +125,7 @@ def pull_and_push_job(app, job_id):
                     src_data = data[0] if isinstance(data, list) else data
                     # Flat merge into aggregated data with source prefix
                     for k, v in src_data.items():
-                        aggregated_data[f"source_{idx}.{k}"] = v
+                        local_aggregated[f"source_{idx}.{k}"] = v
                 else:
                     print(f"Source {idx} ({src_url}) returned {res.status_code}")
             except Exception as e:
@@ -134,26 +141,34 @@ def pull_and_push_job(app, job_id):
                     "ignition": "0"
                 }
                 for k, v in mock_data.items():
-                    aggregated_data[f"source_{idx}.{k}"] = v
-        
+                    local_aggregated[f"source_{idx}.{k}"] = v
+            return local_aggregated
+
+        # Launch concurrent requests for all sources
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(sources) if sources else 1) as executor:
+            future_to_src = {executor.submit(fetch_source_data, idx, src): idx for idx, src in enumerate(sources)}
+            for future in concurrent.futures.as_completed(future_to_src):
+                local_data = future.result()
+                aggregated_data.update(local_data)
+    
         # --- 2. Transform Data ---
         mapping = t_dict.get('field_mapping', [])
         if mapping:
             final_payload = build_nested_payload(mapping, aggregated_data)
         else:
             final_payload = aggregated_data
-            
+        
         # --- 3. Authenticate with Destination ---
         dest_headers = {'Content-Type': 'application/json'}
         if template.client_auth_type == 'custom_login':
             creds = t_dict.get('client_credentials', {})
             email = creds.get('email')
             password = creds.get('password')
-            
+        
             parsed_url = urlparse(template.client_url)
             base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
             auth_url = f"{base_url}/api/v1/login"
-            
+        
             try:
                 auth_res = requests.post(auth_url, json={"email": email, "password": password}, timeout=10)
                 if auth_res.status_code == 200:
@@ -189,16 +204,16 @@ def pull_and_push_job(app, job_id):
         adapter = HTTPAdapter(max_retries=retry_strategy)
         session.mount("https://", adapter)
         session.mount("http://", adapter)
-        
+    
         try:
             print(f"Pushing to {template.client_url}")
             if template.client_url:
                 dest_res = session.post(template.client_url, json=final_payload, headers=dest_headers, timeout=req_timeout)
-                
+            
                 if dest_res.status_code >= 400:
                     error_msg = dest_res.text
                     log_job(job.id, 'FAILED', final_payload, http_status=dest_res.status_code, error_message=error_msg)
-                    
+                
                     # Queue failed payload
                     from bridge_app.models.failed_payload import FailedPayload
                     from bridge_app.extensions import db
@@ -212,7 +227,7 @@ def pull_and_push_job(app, job_id):
         except Exception as e:
             error_msg = str(e)
             log_job(job.id, 'FAILED', final_payload, http_status=500, error_message=error_msg)
-            
+        
             # Queue failed payload
             from bridge_app.models.failed_payload import FailedPayload
             from bridge_app.extensions import db
@@ -221,24 +236,28 @@ def pull_and_push_job(app, job_id):
             db.session.commit()
 
 
-def update_swagger_connections(app):
-    """
-    Background job to refresh Swagger JSON content for remote connections.
-    """
-    with app.app_context():
+def update_swagger_connections():
+    from bridge_app.app import current_app_instance
+    if not current_app_instance:
+        from bridge_app.app import create_app
+        current_app_instance = create_app()
+    with current_app_instance.app_context():
+        """
+        Background job to refresh Swagger JSON content for remote connections.
+        """
         from bridge_app.models import SwaggerConnection
         from bridge_app.extensions import db
         import requests
         from datetime import datetime
-        
+    
         from bridge_app.services.file_logger import get_connection_logger
-        
+    
         # Get connections that are remote and URL is not null
         conns = SwaggerConnection.query.filter_by(is_local_file=False).all()
         for conn in conns:
             if not conn.url:
                 continue
-                
+            
             # Respect individual sync_schedule
             if conn.sync_schedule:
                 from datetime import timedelta
@@ -249,10 +268,10 @@ def update_swagger_connections(app):
                     continue
                 elif conn.sync_schedule == 'weekly' and conn.last_updated and (now - conn.last_updated) < timedelta(weeks=1):
                     continue
-            
+        
             logger = get_connection_logger(conn.name)
             logger.info(f"Starting sync for SwaggerConnection: {conn.name} (URL: {conn.url})")
-            
+        
             try:
                 resp = requests.get(conn.url, timeout=10)
                 if resp.ok:
@@ -272,18 +291,22 @@ def update_swagger_connections(app):
                 logger.error(msg)
 
 
-def cleanup_failed_payloads(app):
-    """
-    Background job to prune FailedPayload records older than retention_minutes.
-    """
-    with app.app_context():
+def cleanup_failed_payloads():
+    from bridge_app.app import current_app_instance
+    if not current_app_instance:
+        from bridge_app.app import create_app
+        current_app_instance = create_app()
+    with current_app_instance.app_context():
+        """
+        Background job to prune FailedPayload records older than retention_minutes.
+        """
         from bridge_app.models.failed_payload import FailedPayload
         from bridge_app.extensions import db
         from datetime import datetime, timedelta
-        
-        retention_minutes = app.config.get('RETRY_QUEUE_RETENTION_MINUTES', 60)
+    
+        retention_minutes = current_app_instance.config.get('RETRY_QUEUE_RETENTION_MINUTES', 60)
         cutoff_time = datetime.utcnow() - timedelta(minutes=retention_minutes)
-        
+    
         try:
             deleted_count = FailedPayload.query.filter(FailedPayload.timestamp < cutoff_time).delete()
             db.session.commit()

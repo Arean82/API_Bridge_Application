@@ -1,7 +1,20 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div x-data="templateManager({{ templates_json }}, {{ conns_lookup_json | default('{}') }})" class="h-full flex flex-col relative">
+<script id="templates-data" type="application/json">{{ templates_json | safe }}</script>
+<script id="conns-data" type="application/json">{{ conns_lookup_json | default('{}') | safe }}</script>
+<script>
+    window.parsedTemplatesData = [];
+    window.parsedConnsData = {};
+    try {
+        window.parsedTemplatesData = JSON.parse(document.getElementById('templates-data').textContent);
+        window.parsedConnsData = JSON.parse(document.getElementById('conns-data').textContent);
+    } catch (e) {
+        console.error("Failed to parse template data", e);
+    }
+</script>
+
+<div id="templateManagerContainer" class="h-full flex flex-col relative">
     <!-- Header -->
     <div class="flex justify-between items-center mb-8">
         <div>
@@ -32,43 +45,41 @@
                     <td class="p-4 font-mono theme-text-muted">{{ template.id }}</td>
                     <td class="p-4 font-semibold">{{ template.name }}</td>
                     <td class="p-4 theme-text-muted">
-                        <!-- We cannot easily get dictionary length in jinja without a filter, so we just show mapped -->
                         Mapped
                     </td>
                     <td class="p-4">
-                        <template x-data="{ t: templates.find(x => x.id === {{ template.id }}) }">
-                            <div class="flex flex-wrap gap-1">
-                                <template x-if="t && t.sources && t.sources.length > 0">
-                                    <template x-for="src in t.sources" :key="Math.random()">
-                                        <template x-if="src.connectionId">
-                                            <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2 py-0.5 rounded border border-indigo-200"
-                                                  x-text="connsLookup[src.connectionId] || 'Unknown'">
-                                            </span>
-                                        </template>
-                                    </template>
-                                </template>
-                                <span x-show="!t || !t.sources || !t.sources.some(s => s.connectionId)" class="text-sm theme-text-muted">None</span>
-                            </div>
-                        </template>
+                        <div class="flex flex-wrap gap-1">
+                            {% set t_dict = template.to_dict() %}
+                            {% set has_conns = namespace(value=false) %}
+                            {% if t_dict.get('sources') %}
+                                {% for src in t_dict.sources %}
+                                    {% if src.connectionId %}
+                                        {% set has_conns.value = true %}
+                                        <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2 py-0.5 rounded border border-indigo-200">
+                                            <script>document.write(window.parsedConnsData["{{ src.connectionId }}"] || "Unknown");</script>
+                                        </span>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                            
+                            {% if not has_conns.value %}
+                                <span class="text-sm theme-text-muted">None</span>
+                            {% endif %}
+                        </div>
                     </td>
                     <td class="p-4 text-right space-x-2">
-                        <button @click="openEdit({{ template.id }})"
-                            class="font-medium px-2 py-1 rounded transition text-sm opacity-75 hover:opacity-100">Edit</button>
+                        <button class="edit-template-btn font-medium px-2 py-1 rounded transition text-sm opacity-75 hover:opacity-100" data-id="{{ template.id }}">Edit</button>
                         <a href="/templates/create?clone={{ template.id }}"
                             class="font-medium px-2 py-1 rounded transition text-sm text-green-600 hover:text-green-800">Edit as New</a>
-                        <button @click="openClone({{ template.id }})"
-                            class="font-medium px-2 py-1 rounded transition text-sm text-indigo-600 hover:text-indigo-800">Clone</button>
-                        <button @click="deleteTemplate({{ template.id }})"
-                            class="text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded transition text-sm">Delete</button>
+                        <button class="clone-template-btn font-medium px-2 py-1 rounded transition text-sm text-indigo-600 hover:text-indigo-800" data-id="{{ template.id }}">Clone</button>
+                        <button class="delete-template-btn text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded transition text-sm" data-id="{{ template.id }}">Delete</button>
                     </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="4" class="p-12 text-center theme-text-muted">
-                        <svg class="mx-auto h-12 w-12 opacity-50 mb-3" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <td colspan="5" class="p-12 text-center theme-text-muted">
+                        <svg class="mx-auto h-12 w-12 opacity-50 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                         <p class="text-lg font-medium" style="color: var(--text-main);">No templates found</p>
                         <p class="mt-1">Go to the Schedule Config page to build and save a new template.</p>
@@ -79,204 +90,9 @@
         </table>
     </div>
 
-    <!-- Unified Modal for Clone & Edit -->
-    <div x-show="showModal" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center">
-        <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="closeModal"></div>
-
-        <!-- Modal Content -->
-        <div class="theme-panel flex flex-col w-[800px] max-h-[90vh] z-10 shadow-2xl overflow-hidden relative">
-
-            <div class="p-6 border-b border-black/10 flex justify-between items-center bg-gray-50/50">
-                <h3 class="text-xl font-bold" x-text="mode === 'edit' ? 'Edit Template' : 'Clone Template'"></h3>
-                <button @click="closeModal" class="theme-text-muted hover:text-black">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                        </path>
-                    </svg>
-                </button>
-            </div>
-
-            <div class="p-6 overflow-y-auto space-y-8 flex-1 bg-white">
-
-                <!-- Template Name -->
-                <div>
-                    <label class="block text-sm font-medium mb-1">Template Name</label>
-                    <input type="text" x-model="templateName" class="theme-input w-full p-2.5 text-sm"
-                        placeholder="e.g. Shopify Orders Feed">
-                </div>
-
-                <hr class="border-black/5">
-
-                <!-- Source (Partner) API Section -->
-                <div class="space-y-4">
-                    <div class="flex justify-between items-end">
-                        <h4 class="font-bold text-gray-800">Source Configuration</h4>
-                        <div class="flex items-center gap-4">
-                            <label x-show="mode === 'clone'"
-                                class="flex items-center space-x-2 text-sm theme-text-muted cursor-pointer">
-                                <input type="checkbox" x-model="editSource"
-                                    class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                                <span>Edit Sources</span>
-                            </label>
-                            <button x-show="editSource" @click="addSource()"
-                                class="theme-btn px-3 py-1 text-xs rounded">+ Add Endpoint</button>
-                        </div>
-                    </div>
-
-                    <template x-for="(src, idx) in sources" :key="src.id">
-                        <div class="relative p-5 border border-black/10 rounded-lg bg-gray-50/50 shadow-sm"
-                            :class="{'opacity-50': !editSource}">
-                            <button x-show="editSource && sources.length > 1" @click="removeSource(idx)"
-                                class="absolute top-3 right-3 text-red-400 hover:text-red-600">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
-                                    </path>
-                                </svg>
-                            </button>
-                            <h4 class="font-bold text-sm mb-4 theme-text-muted">ENDPOINT <span x-text="idx + 1"></span>
-                            </h4>
-
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="col-span-2">
-                                    <label class="block text-sm font-medium mb-1">Swagger Connection</label>
-                                    <select x-model="src.connectionId" @change="fetchApiDocs(idx)"
-                                        :disabled="!editSource" class="theme-input w-full p-2.5 text-sm"
-                                        :class="{'bg-gray-50 cursor-not-allowed': !editSource}">
-                                        <option value="">-- Select Connection --</option>
-                                        <template x-for="(name, id) in connsLookup" :key="id">
-                                            <option :value="id" x-text="name"></option>
-                                        </template>
-                                    </select>
-                                </div>
-
-                                <div class="col-span-2">
-                                    <label class="block text-sm font-medium mb-1">Select API Endpoint</label>
-                                    <select x-model="src.selectedApi"
-                                        @change="updateSourceUrl(idx)"
-                                        :disabled="!editSource || !src.availableApis || src.availableApis.length === 0" class="theme-input w-full p-2.5 text-sm"
-                                        :class="{'bg-gray-50 cursor-not-allowed': !editSource}">
-                                        <option value="">-- Choose API --</option>
-                                        <template x-for="api in src.availableApis" :key="api.path">
-                                            <option :value="api.path" x-text="api.name + ' (' + api.path + ')'">
-                                            </option>
-                                        </template>
-                                    </select>
-                                </div>
-
-                                <div class="col-span-2">
-                                    <label class="block text-sm font-medium mb-1">Source URL</label>
-                                    <input type="text" x-model="src.url" :disabled="!editSource"
-                                        class="theme-input w-full p-2.5 text-sm"
-                                        :class="{'bg-gray-50 cursor-not-allowed': !editSource}">
-                                </div>
-
-                                <div class="col-span-2">
-                                    <label class="block text-sm font-medium mb-1">Source Auth Key (Bearer)</label>
-                                    <input type="password" x-model="src.auth_token" :disabled="!editSource"
-                                        class="theme-input w-full p-2.5 text-sm"
-                                        :class="{'bg-gray-50 cursor-not-allowed': !editSource}" placeholder="Optional">
-                                </div>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-
-                <hr class="border-black/5">
-
-                <!-- Destination (Client) API Section -->
-                <div class="space-y-4">
-                    <h4 class="font-bold text-gray-800">Destination Configuration</h4>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="col-span-2">
-                            <label class="block text-sm font-medium mb-1">Destination URL</label>
-                            <input type="text" x-model="clientUrl" class="theme-input w-full p-2.5 text-sm"
-                                placeholder="https://api.client.com/ingest">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Auth Type</label>
-                            <select x-model="clientAuthType" class="theme-input w-full p-2.5 text-sm">
-                                <option value="none">None</option>
-                                <option value="bearer">Bearer Token</option>
-                            </select>
-                        </div>
-                        <div x-show="clientAuthType === 'bearer'">
-                            <label class="block text-sm font-medium mb-1">Auth Token</label>
-                            <input type="password" x-model="clientAuthToken" class="theme-input w-full p-2.5 text-sm">
-                        </div>
-                    </div>
-                </div>
-
-                <hr class="border-black/5">
-
-                <!-- Field Mapping Section -->
-                <div>
-                    <div class="flex justify-between items-center mb-4">
-                        <h4 class="font-bold text-gray-800">Field Mapping</h4>
-                        <button @click="addFieldRow" class="theme-btn px-3 py-1.5 text-sm flex items-center gap-1">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 4v16m8-8H4"></path>
-                            </svg>
-                            Add Field
-                        </button>
-                    </div>
-
-                    <div class="space-y-2">
-                        <template x-for="(row, index) in mappedFields" :key="row.id">
-                            <div class="flex items-center gap-3 bg-gray-50 p-3 rounded-lg border border-black/10">
-                                <div class="flex-1">
-                                    <select :value="row.source_field"
-                                        x-effect="let _ = currentApiFields; $nextTick(() => { $el.value = row.source_field })"
-                                        @change="row.source_field = $event.target.value; autoFillName(index)"
-                                        class="theme-input w-full p-2 text-sm">
-                                        <option value="">-- Source Field --</option>
-                                        <template x-for="opt in currentApiFields" :key="opt">
-                                            <option :value="opt" x-text="opt"></option>
-                                        </template>
-                                    </select>
-                                </div>
-                                <div class="flex-none theme-text-muted">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-                                    </svg>
-                                </div>
-                                <div class="flex-1">
-                                    <input type="text" x-model="row.client_name" class="theme-input w-full p-2 text-sm"
-                                        placeholder="Target Field">
-                                </div>
-                                <button @click="removeFieldRow(index)" class="text-red-500 hover:text-red-700 p-1">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
-                                        </path>
-                                    </svg>
-                                </button>
-                            </div>
-                        </template>
-
-                        <div x-show="mappedFields.length === 0"
-                            class="text-center py-6 text-sm theme-text-muted bg-gray-50 rounded-lg border border-black/10 border-dashed">
-                            No fields mapped.
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="p-4 border-t border-black/10 bg-gray-50/50 flex justify-end gap-3">
-                <button @click="closeModal"
-                    class="px-4 py-2 rounded text-sm font-medium theme-text-muted hover:bg-black/5 transition">Cancel</button>
-                <button @click="saveTemplate" class="theme-btn px-6 py-2 text-sm font-medium">Save
-                    Configuration</button>
-            </div>
-
-        </div>
-    </div>
+    {% include 'partials/edit_template_modal.html' %}
 </div>
 
-<script src="{{ url_for('static', filename='js/templates.js') }}"></script>
+<script src="{{ url_for('static', filename='js/edit_template_modal.js') }}?v=3"></script>
+<script type="module" src="{{ url_for('static', filename='js/templates.js') }}?v=3"></script>
 {% endblock %}

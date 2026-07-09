@@ -495,7 +495,9 @@ def save_config():
     )
     
     if save_type == 'schedule':
-        new_template.partner_url = data.get('source_url')
+        # Construct the sources array properly instead of using legacy partner_url
+        sources = [{"name": "Default API", "url": data.get('source_url'), "auth_token": ""}]
+        new_template.sources_json = json.dumps(sources)
         new_template.client_url = data.get('client_url')
         new_template.client_auth_type = 'none' # simplify for now
     

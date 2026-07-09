@@ -16,8 +16,12 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
+current_app_instance = None
+
 def create_app(config_class=Config):
+    global current_app_instance
     app = Flask(__name__)
+    current_app_instance = app
     app.config.from_object(config_class)
 
     # Enable CORS for API Mock endpoints
@@ -27,8 +31,15 @@ def create_app(config_class=Config):
     # Initialize OpenTelemetry Trace Provider with OTLP Exporter if enabled
     import configparser
     import os
+    import sys
+    
+    if getattr(sys, 'frozen', False):
+        base_dir = os.path.dirname(sys.executable)
+    else:
+        base_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+        
     config_ini = configparser.ConfigParser()
-    config_ini.read(os.path.join(os.path.abspath(os.path.dirname(os.path.dirname(__file__))), 'config.ini'))
+    config_ini.read(os.path.join(base_dir, 'config.ini'))
     otlp_enabled = config_ini.getboolean('OPENTELEMETRY', 'enabled', fallback=False)
     
     if otlp_enabled and not isinstance(trace.get_tracer_provider(), TracerProvider):
@@ -79,7 +90,7 @@ def create_app(config_class=Config):
             scheduler.add_job(
                 id=job_id, 
                 func=pull_and_push_job, 
-                args=[app, job.id], 
+                args=[job.id], 
                 trigger='interval', 
                 seconds=job.schedule_interval,
                 replace_existing=True
@@ -93,7 +104,6 @@ def create_app(config_class=Config):
         scheduler.add_job(
             id='swagger_updater',
             func=update_swagger_connections,
-            args=[app],
             trigger='interval',
             replace_existing=True,
             **trigger_kwargs
@@ -104,7 +114,6 @@ def create_app(config_class=Config):
         scheduler.add_job(
             id='failed_payloads_cleanup',
             func=cleanup_failed_payloads,
-            args=[app],
             trigger='interval',
             minutes=5,
             replace_existing=True

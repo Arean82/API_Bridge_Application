@@ -14,7 +14,7 @@
 <body>
     <div id="swagger-ui"></div>
     <script id="swagger-data" type="application/json">
-        {{ conn.json_content | safe }}
+        {{ (conn.json_content or '{}') | tojson | safe }}
     </script>
     <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js" crossorigin></script>
     <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-standalone-preset.js" crossorigin></script>
@@ -22,11 +22,23 @@
         window.onload = function() {
             let spec = null;
             try {
-                // Parse the JSON content injected by the server
-                const swaggerData = document.getElementById('swagger-data').textContent;
-                spec = JSON.parse(swaggerData);
+                // Parse the JSON string injected by tojson
+                const swaggerDataStr = document.getElementById('swagger-data').textContent;
+                const parsedStr = JSON.parse(swaggerDataStr);
                 
-                // Dynamically fix URLs in the frontend so it works instantly without a server restart
+                // Since tojson stringifies it, we parse it a second time if it's still a string
+                spec = typeof parsedStr === 'string' ? JSON.parse(parsedStr) : parsedStr;
+                
+                if (!spec || Object.keys(spec).length === 0) {
+                    document.getElementById('swagger-ui').innerHTML = "<h2 style='color:orange; text-align:center; padding: 20px;'>No API data found for this connection.</h2>";
+                    return;
+                }
+                if (!spec.swagger && !spec.openapi) {
+                    document.getElementById('swagger-ui').innerHTML = "<h2 style='color:orange; text-align:center; padding: 20px;'>Invalid Swagger JSON.<br><small style='color:gray'>The API URL returned a standard JSON error instead of the actual Swagger definition.</small><br><br><div style='text-align:left; background:#eee; padding:10px; font-family:monospace; font-size:12px; white-space:pre-wrap;'>" + JSON.stringify(spec, null, 2) + "</div></h2>";
+                    return;
+                }
+                
+                // Dynamically fix URLs in the frontend
                 const baseUrl = "{{ conn.url }}";
                 if (baseUrl) {
                     try {
@@ -46,7 +58,6 @@
                             }
                         }
                         
-                        // Fix relative markdown links in description
                         if (spec.info && spec.info.description) {
                             spec.info.description = spec.info.description.replace(/\]\(\//g, '](' + baseOrigin + '/');
                             spec.info.description = spec.info.description.replace('[Try it out]', '[API Documentation]');
@@ -57,7 +68,7 @@
                 }
             } catch(e) {
                 console.error("Failed to parse Swagger JSON content", e);
-                document.getElementById('swagger-ui').innerHTML = "<h2 style='color:red; text-align:center; padding: 20px;'>Failed to load Swagger JSON. Is the JSON valid?</h2>";
+                document.getElementById('swagger-ui').innerHTML = "<h2 style='color:red; text-align:center; padding: 20px;'>Failed to load Swagger JSON. Is the JSON valid?<br><small style='color:black'>" + e.message + "</small></h2>";
                 return;
             }
 

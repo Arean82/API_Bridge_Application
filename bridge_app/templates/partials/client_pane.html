@@ -1,8 +1,8 @@
-<div class="theme-panel flex flex-col" :class="{'fixed inset-4 z-50': fullRight, 'w-2/3': !fullRight}">
+<div id="clientPane" class="theme-panel flex flex-col w-2/3">
     <div class="p-4 border-b border-black/10 flex justify-between items-center">
         <h3 class="font-bold">Destination (Client API)</h3>
-        <button @click="fullRight = !fullRight" class="theme-text-muted hover:opacity-75">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+        <button id="toggleRightFullBtn" class="theme-text-muted hover:opacity-75">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
         </button>
     </div>
     
@@ -11,18 +11,18 @@
         <div class="grid grid-cols-2 gap-4">
             <div class="col-span-2">
                 <label class="block text-sm font-medium mb-1">Destination URL</label>
-                <input type="text" x-model="clientUrl" class="theme-input w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="https://api.client.com/ingest">
+                <input type="text" id="clientUrl" class="theme-input w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="https://api.client.com/ingest">
             </div>
             <div>
                 <label class="block text-sm font-medium mb-1">Auth Type</label>
-                <select x-model="clientAuthType" class="theme-input w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <select id="clientAuthType" class="theme-input w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     <option value="none">None</option>
                     <option value="bearer">Bearer Token</option>
                 </select>
             </div>
-            <div x-show="clientAuthType === 'bearer'">
+            <div id="clientAuthTokenWrapper" style="display: none;">
                 <label class="block text-sm font-medium mb-1">Auth Token</label>
-                <input type="password" x-model="clientAuthToken" class="theme-input w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <input type="password" id="clientAuthToken" class="theme-input w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
         </div>
 
@@ -30,48 +30,16 @@
         <div class="mt-8">
             <div class="flex justify-between items-center mb-4">
                 <h4 class="text-lg font-semibold">Field Mapping</h4>
-                <button @click="addFieldRow" class="theme-btn px-3 py-1.5 text-sm flex items-center gap-1">
+                <button id="addFieldRowBtn" class="theme-btn px-3 py-1.5 text-sm flex items-center gap-1">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                     Add Field
                 </button>
             </div>
             
             <div class="border border-black/10 rounded p-2 bg-black/5">
-                <div id="mapping-list" class="space-y-2 min-h-[100px]">
-                    <template x-for="(row, index) in mappedFields" :key="row.id">
-                        <div class="mapping-row flex items-center gap-3 theme-panel p-3 rounded" style="box-shadow: 0 1px 2px rgba(0,0,0,0.05);" :data-id="row.id">
-                            <div class="cursor-move theme-text-muted hover:opacity-100 px-1">
-                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path></svg>
-                            </div>
-                            
-                            <div class="flex-1">
-                                <select :value="row.source_field" x-effect="let _ = currentApiFields; $nextTick(() => { $el.value = row.source_field })" @change="row.source_field = $event.target.value; autoFillName(index)" class="theme-input w-full p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                    <option value="">-- Select Source Field --</option>
-                                    <template x-for="opt in currentApiFields" :key="opt">
-                                        <option :value="opt" x-text="opt"></option>
-                                    </template>
-                                </select>
-                            </div>
-                            
-                            <div class="flex-none theme-text-muted">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                            </div>
-
-                            <div class="flex-1">
-                                <input type="text" x-model="row.client_name" class="theme-input w-full p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Target Field Name">
-                            </div>
-                            
-                            <button @click="openValueMapping(index)" class="text-blue-500 hover:text-blue-700 text-sm font-medium px-2 py-1 border border-blue-200 rounded whitespace-nowrap bg-blue-50 dark:bg-blue-900/30 dark:border-blue-800" title="Map Values">
-                                {=}
-                            </button>
-                            
-                            <button @click="removeFieldRow(index)" class="text-red-500 hover:text-red-700 p-1">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            </button>
-                        </div>
-                    </template>
-                    
-                    <div x-show="mappedFields.length === 0" class="text-center py-8 text-sm theme-text-muted">
+                <div id="mappingList" class="space-y-2 min-h-[100px]">
+                    <!-- Rendered by JS -->
+                    <div id="noMappedFieldsMsg" class="text-center py-8 text-sm theme-text-muted">
                         Click "+ Add Field" to start mapping.
                     </div>
                 </div>
@@ -83,24 +51,24 @@
     <div class="p-4 border-t border-black/10 flex items-center justify-between bg-black/5 flex-wrap gap-4">
         <div class="flex items-center gap-3">
             <label class="text-sm font-medium">Run Every (Seconds):</label>
-            <input type="number" x-model="scheduleInterval" class="theme-input w-24 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="60">
+            <input type="number" id="scheduleInterval" class="theme-input w-24 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="60">
         </div>
         <div class="flex items-center gap-3">
             <label class="text-sm font-medium">Timeout (Secs):</label>
-            <input type="number" x-model="clientTimeout" class="theme-input w-20 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="30">
+            <input type="number" id="clientTimeout" class="theme-input w-20 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="30">
         </div>
         <div class="flex items-center gap-3">
             <label class="text-sm font-medium">Max Retries:</label>
-            <input type="number" x-model="clientRetries" class="theme-input w-20 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="3">
+            <input type="number" id="clientRetries" class="theme-input w-20 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="3">
         </div>
     </div>
 
     <!-- Value Mapping Modal -->
-    <div x-show="showValueMappingModal" class="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" style="display: none;">
-        <div class="theme-panel rounded-xl shadow-xl max-w-2xl w-full p-6 flex flex-col" @click.away="showValueMappingModal = false">
+    <div id="valueMappingModal" class="fixed inset-0 [background:var(--overlay-bg)] [backdrop-filter:var(--backdrop)] z-[60] flex items-center justify-center p-4" style="display: none;">
+        <div class="theme-panel rounded-xl shadow-xl max-w-xl w-full p-6 flex flex-col relative">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold">Value Mapping for <span class="text-indigo-500" x-text="mappedFields[activeMappingIndex]?.source_field || 'Field'"></span></h3>
-                <button @click="showValueMappingModal = false" class="theme-text-muted hover:opacity-75 text-2xl">&times;</button>
+                <h3 class="text-xl font-bold">Value Mapping for <span id="valueMappingFieldName" class="text-indigo-500">Field</span></h3>
+                <button id="closeValueMappingBtn" class="theme-text-muted hover:opacity-75 text-2xl">&times;</button>
             </div>
             
             <div class="flex-1 overflow-y-auto space-y-3 mb-4 max-h-[60vh]">
@@ -113,38 +81,15 @@
                     <div class="col-span-1"></div>
                 </div>
                 
-                <template x-for="(vm, vmIdx) in (mappedFields[activeMappingIndex]?.value_mapping || [])" :key="vmIdx">
-                    <div class="grid grid-cols-12 gap-2 items-center bg-black/5 p-2 rounded">
-                        <div class="col-span-3">
-                            <input type="text" x-model="vm.source_val" class="theme-input w-full p-1.5 text-sm focus:outline-none" placeholder="on">
-                        </div>
-                        <div class="col-span-2">
-                            <select x-model="vm.source_type" class="theme-input w-full p-1.5 text-xs focus:outline-none">
-                                <option value="string">String</option>
-                                <option value="int">Integer</option>
-                            </select>
-                        </div>
-                        <div class="col-span-1 text-center font-bold theme-text-muted">&rarr;</div>
-                        <div class="col-span-3">
-                            <input type="text" x-model="vm.target_val" class="theme-input w-full p-1.5 text-sm focus:outline-none" placeholder="1">
-                        </div>
-                        <div class="col-span-2">
-                            <select x-model="vm.target_type" class="theme-input w-full p-1.5 text-xs focus:outline-none">
-                                <option value="string">String</option>
-                                <option value="int">Integer</option>
-                            </select>
-                        </div>
-                        <div class="col-span-1 text-center">
-                            <button @click="mappedFields[activeMappingIndex].value_mapping.splice(vmIdx, 1)" class="text-red-500 hover:text-red-700 text-lg font-bold">&times;</button>
-                        </div>
-                    </div>
-                </template>
+                <div id="valueMappingRowsContainer">
+                    <!-- Value Mapping rows injected via JS -->
+                </div>
                 
-                <button @click="addValueMappingRow()" class="theme-btn px-3 py-2 text-sm w-full mt-2 border-dashed bg-transparent hover:bg-black/5">+ Add Value Mapping</button>
+                <button id="addValueMappingRowBtn" class="theme-btn px-3 py-2 text-sm w-full mt-2 border-dashed bg-transparent hover:bg-black/5">+ Add Value Mapping</button>
             </div>
             
             <div class="flex justify-end">
-                <button @click="showValueMappingModal = false" class="theme-btn px-6 py-2 rounded">Done</button>
+                <button id="doneValueMappingBtn" class="theme-btn px-6 py-2 rounded">Done</button>
             </div>
         </div>
     </div>
