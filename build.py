@@ -62,14 +62,16 @@ def main():
     if build_onedir:
         print("\n2. Building 'onedir' executable...")
         subprocess.run([sys.executable, "-m", "PyInstaller", "bridge_app_onedir.spec", "--clean", "--noconfirm", "--distpath", "dist"], check=True)
-        # Copy .env
+        # Copy .env and config.ini
         shutil.copy(".env", os.path.join("dist", "onedir", ".env"))
+        shutil.copy("config.ini", os.path.join("dist", "onedir", "config.ini"))
     
     if build_onefile:
         print("\n3. Building 'onefile' executable...")
         subprocess.run([sys.executable, "-m", "PyInstaller", "bridge_app_onefile.spec", "--clean", "--noconfirm", "--distpath", "dist/onefile"], check=True)
-        # Copy .env
+        # Copy .env and config.ini
         shutil.copy(".env", os.path.join("dist", "onefile", ".env"))
+        shutil.copy("config.ini", os.path.join("dist", "onefile", "config.ini"))
     
     print("\n=== Build Complete! ===")
     print("Your built applications are located in the 'dist' folder.")

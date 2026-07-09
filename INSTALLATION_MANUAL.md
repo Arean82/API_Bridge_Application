@@ -49,8 +49,8 @@ The repository ships a helper script `build.py` that wraps PyInstaller.
    ```
 2. **Choose the build mode**
 
-   - **OneDir** – Recommended for a quick first build. PyInstaller creates a `dist/bridge_app/` folder containing `bridge_app.exe` (or a Linux binary) and all required DLLs/shared objects.
-   - **OneFile** – Produces a single standalone executable (`dist/bridge_app.exe`). This takes longer and may require extra DLLs, but results in a single file you can copy elsewhere.
+   - **OneDir** – Recommended for a quick first build. PyInstaller creates a `dist/onedir/` folder containing `bridge_app.exe` (or a Linux binary) and all required DLLs/shared objects.
+   - **OneFile** – Produces a single standalone executable (`dist/onefile/bridge_app.exe`). This takes longer and may require extra DLLs, but results in a single file you can copy elsewhere.
 3. **What PyInstaller does behind the scenes**
 
    - Collects **all Python modules** imported by the project (`bridge_app/` package).
@@ -59,14 +59,14 @@ The repository ships a helper script `build.py` that wraps PyInstaller.
    - Packs the Python interpreter itself, so the result runs on any compatible OS without a separate Python install.
 4. **After the build completes**
 
-   - The executable will be located in `dist/bridge_app/` (OneDir) or `dist/bridge_app.exe` (OneFile).
+   - The executable will be located in `dist/onedir/` (OneDir) or `dist/onefile/bridge_app.exe` (OneFile).
    - Test it by running:
      ```bash
      # Windows
-     dist\bridge_app\bridge_app.exe
+     dist\onedir\bridge_app.exe
 
      # Linux / macOS
-     ./dist/bridge_app/bridge_app
+     ./dist/onedir/bridge_app
      ```
    - You should see the message:
      ```
@@ -184,7 +184,7 @@ You should receive a `200 OK` response with JSON from the API.
 Copy the executable to the target host, e.g.:
 
 ```bash
-scp dist/bridge_app/bridge_app user@server:/opt/api-bridge/
+scp dist/onedir/bridge_app user@server:/opt/api-bridge/
 # Windows example using WinSCP or copy the .exe manually
 ```
 

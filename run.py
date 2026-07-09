@@ -15,9 +15,14 @@ import configparser
 app = create_app()
 
 if __name__ == '__main__':
-    # Load config.ini
+    import sys
+    if getattr(sys, 'frozen', False):
+        base_dir = os.path.dirname(sys.executable)
+    else:
+        base_dir = os.path.abspath(os.path.dirname(__file__))
+        
     config_ini = configparser.ConfigParser()
-    config_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'config.ini')
+    config_path = os.path.join(base_dir, 'config.ini')
     config_ini.read(config_path)
 
     # Read variables with fallbacks
