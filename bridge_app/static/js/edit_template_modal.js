@@ -6,6 +6,7 @@ class TemplateModalController {
         this.sources = [];
         this.editSource = false;
         this.clientUrl = '';
+        this.executionMode = 'push';
         this.clientAuthType = 'none';
         this.clientAuthToken = '';
         this.mappedFields = [];
@@ -28,6 +29,11 @@ class TemplateModalController {
         this.addEndpointBtn = document.getElementById('addSourceBtn');
         this.sourcesContainer = document.getElementById('sourcesContainer');
         this.clientUrlInput = document.getElementById('clientUrl');
+        this.executionModeSelect = document.getElementById('executionMode');
+        this.clientUrlWrapper = document.getElementById('clientUrlWrapper');
+        this.pullEndpointWrapper = document.getElementById('pullEndpointWrapper');
+        this.pullEndpointUrl = document.getElementById('pullEndpointUrl');
+        this.scheduleIntervalWrapper = document.getElementById('scheduleInterval')?.parentElement;
         this.clientAuthTypeSelect = document.getElementById('clientAuthType');
         this.clientAuthTokenContainer = document.getElementById('clientAuthTokenWrapper');
         this.clientAuthTokenInput = document.getElementById('clientAuthToken');
@@ -51,11 +57,8 @@ class TemplateModalController {
         this.addEndpointBtn.addEventListener('click', () => this.addSource());
         this.addFieldBtn.addEventListener('click', () => this.addFieldRow());
         this.templateNameInput.addEventListener('input', (e) => this.templateName = e.target.value);
-        this.clientUrlInput.addEventListener('input', (e) => this.clientUrl = e.target.value);
-        this.clientAuthTypeSelect.addEventListener('change', (e) => {
-            this.clientAuthType = e.target.value;
-            this.clientAuthTokenContainer.style.display = this.clientAuthType === 'bearer' ? 'block' : 'none';
-        });
+        this.clientUrlInput.addEventListener('input', (e) => { this.clientUrl = e.target.value; });
+        if(this.executionModeSelect) this.executionModeSelect.addEventListener('change', (e) => { this.executionMode = e.target.value; this.renderMode(); });
         this.clientAuthTokenInput.addEventListener('input', (e) => this.clientAuthToken = e.target.value);
         this.editSourceCheckbox.addEventListener('change', (e) => {
             this.editSource = e.target.checked;
@@ -98,6 +101,7 @@ class TemplateModalController {
         this.templateName = this.templateName ? this.templateName + " (Copy)" : "New Clone";
         this.templateId = null;
         this.clientUrl = '';
+        this.executionMode = 'push';
         this.clientAuthType = 'none';
         this.clientAuthToken = '';
         this.renderAll();
@@ -155,6 +159,7 @@ class TemplateModalController {
         }
 
         this.clientUrl = t.client_url || '';
+        this.executionMode = t.execution_mode || 'push';
         this.clientAuthType = t.client_auth_type || 'none';
         if (t.client_credentials_json) {
             try {
@@ -364,6 +369,7 @@ class TemplateModalController {
             name: this.templateName,
             sources: this.sources.map(s => ({ connectionId: s.connectionId, selectedApi: s.selectedApi, url: s.url, auth_token: s.auth_token })),
             client_url: this.clientUrl,
+            execution_mode: this.executionMode,
             client_auth_type: this.clientAuthType,
             client_credentials: { token: this.clientAuthToken, timeout: 30, retries: 3 },
             field_mapping: mappingArray

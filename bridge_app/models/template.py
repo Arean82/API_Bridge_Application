@@ -23,6 +23,12 @@ class TemplateModel(db.Model):
     client_url = db.Column(db.String(255), nullable=True)
     client_auth_type = db.Column(db.String(50), default='none')
     _client_credentials_json = db.Column('client_credentials_json', db.Text, default='{}')
+    execution_mode = db.Column(db.String(50), default='push')
+
+    @property
+    def slug(self):
+        import re
+        return re.sub(r'[^a-zA-Z0-9]', '_', self.name).lower()
 
     @property
     def partner_auth_token(self):
@@ -87,5 +93,6 @@ class TemplateModel(db.Model):
             'client_auth_type': self.client_auth_type,
             'client_credentials': client_creds,
             'field_mapping': json.loads(self.field_mapping_json or '{}'),
+            'execution_mode': self.execution_mode,
             'created_at': self.created_at.isoformat() + "Z"
         }

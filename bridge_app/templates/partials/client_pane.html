@@ -9,10 +9,24 @@
     <div class="p-6 flex-1 overflow-y-auto space-y-6">
         <!-- Client Config -->
         <div class="grid grid-cols-2 gap-4">
-            <div class="col-span-2">
+        <div class="col-span-2 grid grid-cols-2 gap-4 mb-4">
+            <div>
+                <label class="block text-sm font-medium mb-1">Mode of Operation</label>
+                <select id="executionMode" class="theme-input w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="push">Scheduled Push</option>
+                    <option value="pull_rest">On-Demand Pull (REST)</option>
+                    <option value="pull_graphql">On-Demand Pull (GraphQL)</option>
+                </select>
+            </div>
+            <div id="clientUrlWrapper">
                 <label class="block text-sm font-medium mb-1">Destination URL</label>
                 <input type="text" id="clientUrl" class="theme-input w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="https://api.client.com/ingest">
             </div>
+            <div id="pullEndpointWrapper" style="display: none;">
+                <label class="block text-sm font-medium mb-1">Bridge Endpoint URL (Auto-Generated)</label>
+                <input type="text" id="pullEndpointUrl" class="theme-input w-full p-2.5 text-sm bg-gray-100 text-gray-500" readonly placeholder="Will be generated after saving">
+            </div>
+        </div>
             <div>
                 <label class="block text-sm font-medium mb-1">Auth Type</label>
                 <select id="clientAuthType" class="theme-input w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -51,15 +65,15 @@
     <div class="p-4 border-t border-black/10 flex items-center justify-between bg-black/5 flex-wrap gap-4">
         <div class="flex items-center gap-3">
             <label class="text-sm font-medium">Run Every (Seconds):</label>
-            <input type="number" id="scheduleInterval" class="theme-input w-24 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="60">
+            <input type="number" id="scheduleInterval" class="theme-input w-24 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="60" min="1" oninput="if(this.value !== '' && this.value < 1) this.value = 1;">
         </div>
         <div class="flex items-center gap-3">
             <label class="text-sm font-medium">Timeout (Secs):</label>
-            <input type="number" id="clientTimeout" class="theme-input w-20 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="30">
+            <input type="number" id="clientTimeout" class="theme-input w-20 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="30" min="1" oninput="if(this.value !== '' && this.value < 1) this.value = 1;">
         </div>
         <div class="flex items-center gap-3">
             <label class="text-sm font-medium">Max Retries:</label>
-            <input type="number" id="clientRetries" class="theme-input w-20 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="3">
+            <input type="number" id="clientRetries" class="theme-input w-20 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="3" min="0" oninput="if(this.value !== '' && this.value < 0) this.value = 0;">
         </div>
     </div>
 

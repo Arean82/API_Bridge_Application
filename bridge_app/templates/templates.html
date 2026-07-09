@@ -27,67 +27,90 @@
         </a>
     </div>
 
-    <!-- Active Templates Table -->
-    <div class="theme-panel flex-1 overflow-hidden flex flex-col">
-        <table class="w-full text-left">
-            <thead class="text-sm border-b border-black/10 theme-text-muted" style="background: rgba(0,0,0,0.03);">
-                <tr>
-                    <th class="p-4 w-16" style="border-top-left-radius: inherit;">ID</th>
-                    <th class="p-4">Template Name</th>
-                    <th class="p-4">Total Fields Mapped</th>
-                    <th class="p-4">Connections Used</th>
-                    <th class="p-4 text-right" style="border-top-right-radius: inherit;">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-black/5 overflow-y-auto">
-                {% for template in templates %}
-                <tr class="hover:bg-black/5 transition">
-                    <td class="p-4 font-mono theme-text-muted">{{ template.id }}</td>
-                    <td class="p-4 font-semibold">{{ template.name }}</td>
-                    <td class="p-4 theme-text-muted">
-                        Mapped
-                    </td>
-                    <td class="p-4">
-                        <div class="flex flex-wrap gap-1">
-                            {% set t_dict = template.to_dict() %}
-                            {% set has_conns = namespace(value=false) %}
-                            {% if t_dict.get('sources') %}
-                                {% for src in t_dict.sources %}
-                                    {% if src.connectionId %}
-                                        {% set has_conns.value = true %}
-                                        <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2 py-0.5 rounded border border-indigo-200">
-                                            <script>document.write(window.parsedConnsData["{{ src.connectionId }}"] || "Unknown");</script>
-                                        </span>
-                                    {% endif %}
-                                {% endfor %}
+    {% macro render_template_table(title, template_list, empty_message, mode) %}
+    <div class="mb-8">
+        <h3 class="text-xl font-bold mb-4 ml-1" style="color: var(--text-main);">{{ title }}</h3>
+        <div class="theme-panel overflow-hidden flex flex-col mb-6">
+            <table class="w-full text-left">
+                <thead class="text-sm border-b border-black/10 theme-text-muted" style="background: rgba(0,0,0,0.03);">
+                    <tr>
+                        <th class="p-4 w-16" style="border-top-left-radius: inherit;">ID</th>
+                        <th class="p-4">Template Name</th>
+                        <th class="p-4">Total Fields Mapped</th>
+                        <th class="p-4">Connections Used</th>
+                        <th class="p-4 text-right" style="border-top-right-radius: inherit;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-black/5">
+                    {% for template in template_list %}
+                    <tr class="hover:bg-black/5 transition">
+                        <td class="p-4 font-mono theme-text-muted">{{ template.id }}</td>
+                        <td class="p-4 font-semibold">{{ template.name }}</td>
+                        <td class="p-4 theme-text-muted">Mapped</td>
+                        <td class="p-4">
+                            <div class="flex flex-wrap gap-1">
+                                {% set t_dict = template.to_dict() %}
+                                {% set has_conns = namespace(value=false) %}
+                                {% if t_dict.get('sources') %}
+                                    {% for src in t_dict.sources %}
+                                        {% if src.connectionId %}
+                                            {% set has_conns.value = true %}
+                                            <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2 py-0.5 rounded border border-indigo-200">
+                                                <script>document.write(window.parsedConnsData["{{ src.connectionId }}"] || "Unknown");</script>
+                                            </span>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                                
+                                {% if not has_conns.value %}
+                                    <span class="text-sm theme-text-muted">None</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="p-4 text-right space-x-2">
+                            {% if mode == 'pull_rest' %}
+                                <a href="/api/bridge/pull/{{ template.slug }}/docs" target="_blank" class="font-medium px-2 py-1 rounded transition text-sm text-blue-600 hover:text-blue-800">Swagger UI</a>
+                            {% elif mode == 'pull_graphql' %}
+                                <a href="/api/graphql/{{ template.slug }}" target="_blank" class="font-medium px-2 py-1 rounded transition text-sm text-purple-600 hover:text-purple-800">GraphQL IDE</a>
                             {% endif %}
-                            
-                            {% if not has_conns.value %}
-                                <span class="text-sm theme-text-muted">None</span>
-                            {% endif %}
-                        </div>
-                    </td>
-                    <td class="p-4 text-right space-x-2">
-                        <button class="edit-template-btn font-medium px-2 py-1 rounded transition text-sm opacity-75 hover:opacity-100" data-id="{{ template.id }}">Edit</button>
-                        <a href="/templates/create?clone={{ template.id }}"
-                            class="font-medium px-2 py-1 rounded transition text-sm text-green-600 hover:text-green-800">Edit as New</a>
-                        <button class="clone-template-btn font-medium px-2 py-1 rounded transition text-sm text-indigo-600 hover:text-indigo-800" data-id="{{ template.id }}">Clone</button>
-                        <button class="delete-template-btn text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded transition text-sm" data-id="{{ template.id }}">Delete</button>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="5" class="p-12 text-center theme-text-muted">
-                        <svg class="mx-auto h-12 w-12 opacity-50 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <p class="text-lg font-medium" style="color: var(--text-main);">No templates found</p>
-                        <p class="mt-1">Go to the Schedule Config page to build and save a new template.</p>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                            <button class="edit-template-btn font-medium px-2 py-1 rounded transition text-sm opacity-75 hover:opacity-100" data-id="{{ template.id }}">Edit</button>
+                            <a href="/templates/create?clone={{ template.id }}"
+                                class="font-medium px-2 py-1 rounded transition text-sm text-green-600 hover:text-green-800">Edit as New</a>
+                            <button class="clone-template-btn font-medium px-2 py-1 rounded transition text-sm text-indigo-600 hover:text-indigo-800" data-id="{{ template.id }}">Clone</button>
+                            <button class="delete-template-btn text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded transition text-sm" data-id="{{ template.id }}">Delete</button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="p-8 text-center theme-text-muted">
+                            <p class="text-md font-medium" style="color: var(--text-main);">{{ empty_message }}</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endmacro %}
+
+    {% set push_templates = [] %}
+    {% set pull_rest_templates = [] %}
+    {% set pull_graphql_templates = [] %}
+
+    {% for t in templates %}
+        {% if t.execution_mode == 'pull_rest' %}
+            {% set _ = pull_rest_templates.append(t) %}
+        {% elif t.execution_mode == 'pull_graphql' %}
+            {% set _ = pull_graphql_templates.append(t) %}
+        {% else %}
+            {% set _ = push_templates.append(t) %}
+        {% endif %}
+    {% endfor %}
+
+    <div class="flex-1 overflow-y-auto pr-2">
+        {{ render_template_table('Scheduled Push API', push_templates, 'No push templates found.', 'push') }}
+        {{ render_template_table('On-Demand Pull API (REST)', pull_rest_templates, 'No REST pull templates found.', 'pull_rest') }}
+        {{ render_template_table('On-Demand Pull API (GraphQL)', pull_graphql_templates, 'No GraphQL pull templates found.', 'pull_graphql') }}
     </div>
 
     {% include 'partials/edit_template_modal.html' %}

@@ -314,3 +314,37 @@ def cleanup_failed_payloads():
                 print(f"Cleaned up {deleted_count} expired failed payloads.")
         except Exception as e:
             print(f"Failed to cleanup payloads: {e}")
+
+
+def execute_template_mapping(template_id):
+    from bridge_app.models.template import TemplateModel
+    from bridge_app.app import current_app_instance
+    from bridge_app.services.task_runner import fetch_data_from_source, transform_payload
+    import json
+    
+    with current_app_instance.app_context():
+        template = TemplateModel.query.get(template_id)
+        if not template:
+            return None
+        
+        aggregated_data = {}
+        # Fetch from sources
+        for idx, src in enumerate(template.sources):
+            # Same logic as pull_and_push_job
+            url = src.get('url')
+            auth_token = src.get('auth_token')
+            if not url:
+                continue
+                
+            try:
+                data = fetch_data_from_source(url, auth_token)
+                aggregated_data[f'source_{idx}'] = data
+            except Exception as e:
+                print(f'Pull mode fetch error on {url}: {e}')
+                # For pull mode, we might want to return partial data or fail
+                aggregated_data[f'source_{idx}'] = {}
+                
+        # Transform payload
+        final_payload = transform_payload(aggregated_data, template.field_mapping)
+        return final_payload
+

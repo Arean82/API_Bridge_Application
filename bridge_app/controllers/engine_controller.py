@@ -88,7 +88,7 @@ def create_template():
     db.session.commit()
     
     if data.get('schedule_immediately'):
-        schedule_interval = data.get('schedule_interval', 60)
+        schedule_interval = max(1, int(data.get('schedule_interval', 60)))
         new_job = JobModel(
             template_id=new_template.id,
             schedule_interval=schedule_interval
@@ -151,7 +151,7 @@ def get_jobs():
 def create_job():
     data = request.json
     template_id = data.get('template_id')
-    schedule_interval = data.get('schedule_interval', 60)
+    schedule_interval = max(1, int(data.get('schedule_interval', 60)))
     
     new_job = JobModel(
         template_id=template_id,
@@ -505,7 +505,7 @@ def save_config():
     db.session.commit()
     
     if save_type == 'schedule':
-        schedule_interval = data.get('schedule_interval', 60)
+        schedule_interval = max(1, int(data.get('schedule_interval', 60)))
         new_job = JobModel(
             template_id=new_template.id,
             schedule_interval=schedule_interval
@@ -585,3 +585,332 @@ def mock_server(conn_id, path):
                 return jsonify(json_content['examples'][first_key]['value'])
                 
     return jsonify({"_mock_message": "No static example defined in spec for this endpoint."}), 200
+
+
+@api_bp.route('/bridge/pull/<template_slug>', methods=['GET'])
+def pull_endpoint_rest(template_slug):
+    """
+    Auto-generated REST endpoint for Pull-mode templates.
+    ---
+    tags:
+      - Pull Endpoints
+    parameters:
+      - name: template_slug
+        in: path
+        type: string
+        required: true
+    responses:
+      200:
+        description: Translated payload
+    """
+    from bridge_app.models.template import TemplateModel
+    from flask import request, abort
+    
+    all_templates = TemplateModel.query.all()
+    template = next((t for t in all_templates if t.slug == template_slug), None)
+    if not template:
+        abort(404)
+    template_id = template.id
+    if template.execution_mode != 'pull_rest':
+        from flask import jsonify
+        return jsonify({'error': 'Template is not configured for REST Pull mode'}), 400
+        
+    # Check Auth
+    import json
+    client_creds = json.loads(template.client_credentials_json or '{}')
+    expected_token = client_creds.get('token')
+    if expected_token:
+        auth_header = request.headers.get('Authorization', '')
+        if not auth_header.startswith('Bearer ') or auth_header.split(' ')[1] != expected_token:
+            from flask import jsonify
+            return jsonify({'error': 'Unauthorized'}), 401
+            
+    # Execute mapping
+    from bridge_app.services.task_runner import execute_template_mapping
+    from opentelemetry import trace
+    tracer = trace.get_tracer(__name__)
+    with tracer.start_as_current_span("pull_rest_request") as span:
+        span.set_attribute("template.id", template_id)
+        result = execute_template_mapping(template_id)
+        
+    if result is None:
+        from flask import jsonify
+        return jsonify({'error': 'Failed to execute mapping'}), 500
+        
+    from flask import jsonify
+    return jsonify(result)
+
+
+
+
+
+def generate_graphql_schema_from_mapping(field_mapping):
+    import graphene
+    
+    # We dynamically create attributes for our ObjectType based on the field_mapping targets
+    attrs = {}
+    for mapping in field_mapping:
+        target = mapping.get("target")
+        if target:
+            # Clean up the target name for GraphQL (replace dots, brackets with underscores)
+            import re
+            safe_name = re.sub(r'[^a-zA-Z0-9_]', '_', target)
+            attrs[safe_name] = graphene.String()
+            
+    # Create the dynamic type
+    DynamicType = type("DynamicPayload", (graphene.ObjectType,), attrs)
+    
+    class Query(graphene.ObjectType):
+        payload = graphene.Field(DynamicType)
+        
+        def resolve_payload(self, info):
+            # The data will be passed in through context
+            data = info.context.get('payload_data', {})
+            
+            # Map the clean names back to the data we have
+            resolver_data = {}
+            for mapping in field_mapping:
+                target = mapping.get("target")
+                if target:
+                    import re
+                    safe_name = re.sub(r'[^a-zA-Z0-9_]', '_', target)
+                    resolver_data[safe_name] = data.get(target, None)
+                    
+            return DynamicType(**resolver_data)
+            
+    return graphene.Schema(query=Query)
+
+@api_bp.route('/graphql/<template_slug>', methods=['GET', 'POST'])
+def pull_endpoint_graphql(template_slug):
+    from bridge_app.models.template import TemplateModel
+    from flask import request, render_template_string, abort
+    import configparser
+    import os
+    from bridge_app.app import current_app_instance
+    
+    all_templates = TemplateModel.query.all()
+    template = next((t for t in all_templates if t.slug == template_slug), None)
+    if not template:
+        abort(404)
+    template_id = template.id
+    if template.execution_mode != 'pull_graphql':
+        from flask import jsonify
+        return jsonify({'error': 'Template is not configured for GraphQL Pull mode'}), 400
+        
+    # GET request - serve the IDE
+    if request.method == 'GET':
+        config = configparser.ConfigParser()
+        config.read(os.path.join(current_app_instance.root_path, '..', 'config.ini'))
+        ui_choice = config.get('Server', 'graphql_ui', fallback='native').lower()
+        
+        if ui_choice == 'altair':
+            return render_template_string("""
+            <!doctype html>
+            <html>
+              <head>
+                <meta charset="utf-8">
+                <title>Altair</title>
+                <base href="https://cdn.jsdelivr.net/npm/altair-static/build/dist/">
+                <link rel="stylesheet" href="styles.css">
+              </head>
+              <body>
+                <app-root>
+                  <style>
+                    .loading-screen { display: none; }
+                  </style>
+                  <div class="loading-screen">Loading Altair...</div>
+                </app-root>
+                <script type="text/javascript" src="runtime.js"></script>
+                <script type="text/javascript" src="polyfills.js"></script>
+                <script type="text/javascript" src="main.js"></script>
+                <script>
+                  window.onload = function() {
+                    AltairGraphQL.init();
+                  };
+                </script>
+              </body>
+            </html>
+            """)
+        else:
+            return render_template_string("""
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset=utf-8/>
+              <title>GraphQL Playground</title>
+              <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/graphql-playground-react/build/static/css/index.css" />
+              <link rel="shortcut icon" href="https://cdn.jsdelivr.net/npm/graphql-playground-react/build/favicon.png" />
+              <script src="https://cdn.jsdelivr.net/npm/graphql-playground-react/build/static/js/middleware.js"></script>
+            </head>
+            <body>
+              <div id="root">
+                <style>
+                  body { margin: 0; background-color: #172a3a; font-family: Open Sans, sans-serif; height: 100vh; }
+                  #root { height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; }
+                  .loading { font-size: 32px; font-weight: 200; color: rgba(255, 255, 255, .6); margin-left: 20px; }
+                  img { width: 78px; height: 78px; }
+                  .title { font-weight: 400; }
+                </style>
+                <img src='https://cdn.jsdelivr.net/npm/graphql-playground-react/build/logo.png' alt=''>
+                <div class="loading"> Loading
+                  <span class="title">GraphQL Playground</span>
+                </div>
+              </div>
+              <script>window.addEventListener('load', function (event) {
+                  GraphQLPlayground.init(document.getElementById('root'), {
+                    endpoint: window.location.href
+                  })
+                })</script>
+            </body>
+            </html>
+            """)
+
+    # POST request - execute query
+    # Check Auth
+    import json
+    client_creds = json.loads(template.client_credentials_json or '{}')
+    expected_token = client_creds.get('token')
+    if expected_token:
+        auth_header = request.headers.get('Authorization', '')
+        if not auth_header.startswith('Bearer ') or auth_header.split(' ')[1] != expected_token:
+            from flask import jsonify
+            return jsonify({'error': 'Unauthorized'}), 401
+            
+    # Execute mapping
+    from bridge_app.services.task_runner import execute_template_mapping
+    from opentelemetry import trace
+    tracer = trace.get_tracer(__name__)
+    with tracer.start_as_current_span("pull_graphql_request") as span:
+        span.set_attribute("template.id", template_id)
+        result = execute_template_mapping(template_id)
+        
+    if result is None:
+        from flask import jsonify
+        return jsonify({'error': 'Failed to execute mapping'}), 500
+        
+    # GraphQL Execution
+    query = request.json.get('query')
+    if not query:
+        from flask import jsonify
+        return jsonify({'error': 'No query provided'}), 400
+        
+    import json
+    schema = generate_graphql_schema_from_mapping(json.loads(template.field_mapping_json or '[]'))
+    execution_result = schema.execute(query, context={'payload_data': result})
+    
+    response = {}
+    if execution_result.errors:
+        response['errors'] = [str(err) for err in execution_result.errors]
+    if execution_result.data:
+        response['data'] = execution_result.data
+        
+    from flask import jsonify
+    return jsonify(response)
+
+
+
+@api_bp.route('/bridge/pull/<template_slug>/spec', methods=['GET'])
+def pull_endpoint_swagger_spec(template_slug):
+    from bridge_app.models.template import TemplateModel
+    from flask import jsonify, abort
+    all_templates = TemplateModel.query.all()
+    template = next((t for t in all_templates if t.slug == template_slug), None)
+    if not template:
+        abort(404)
+    template_id = template.id
+    
+    import json
+    field_mapping = json.loads(template.field_mapping_json or '[]')
+    properties = {}
+    for mapping in field_mapping:
+        target = mapping.get("target")
+        if target:
+            properties[target] = {"type": "string"}
+            
+    spec = {
+        "swagger": "2.0",
+        "info": {
+            "title": template.name,
+            "description": "Auto-generated API Gateway for Template: " + template.name,
+            "version": "1.0.0"
+        },
+        "basePath": "/",
+        "schemes": ["http", "https"],
+        "paths": {
+            f"/api/bridge/pull/{template_id}": {
+                "get": {
+                    "summary": "Fetch and transform data",
+                    "description": "Pulls data from configured sources and translates it into the mapped schema.",
+                    "produces": ["application/json"],
+                    "responses": {
+                        "200": {
+                            "description": "Successful operation",
+                            "schema": {
+                                "type": "object",
+                                "properties": properties
+                            }
+                        },
+                        "401": {
+                            "description": "Unauthorized"
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    # Add auth requirements if token is set
+    client_creds = json.loads(template.client_credentials_json or '{}')
+    if client_creds.get('token'):
+        spec["securityDefinitions"] = {
+            "Bearer": {
+                "type": "apiKey",
+                "name": "Authorization",
+                "in": "header"
+            }
+        }
+        spec["paths"][f"/api/bridge/pull/{template_id}"]["get"]["security"] = [{"Bearer": []}]
+        
+    return jsonify(spec)
+
+@api_bp.route('/bridge/pull/<template_slug>/docs', methods=['GET'])
+def pull_endpoint_swagger_ui(template_slug):
+    from bridge_app.models.template import TemplateModel
+    from flask import render_template_string, request, abort
+    all_templates = TemplateModel.query.all()
+    template = next((t for t in all_templates if t.slug == template_slug), None)
+    if not template:
+        abort(404)
+    template_id = template.id
+    
+    # We load Swagger UI via CDN and point it to our /spec endpoint
+    html = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <title>{{ title }} - Swagger UI</title>
+      <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+    </head>
+    <body>
+      <div id="swagger-ui"></div>
+      <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js" crossorigin></script>
+      <script>
+        window.onload = () => {
+          window.ui = SwaggerUIBundle({
+            url: window.location.origin + '/api/bridge/pull/{{ template_slug }}/spec',
+            dom_id: '#swagger-ui',
+            deepLinking: true,
+            presets: [
+              SwaggerUIBundle.presets.apis,
+              SwaggerUIBundle.SwaggerUIStandalonePreset
+            ],
+            layout: "BaseLayout",
+          });
+        };
+      </script>
+    </body>
+    </html>
+    """
+    return render_template_string(html, title=template.name, template_slug=template_slug)
+

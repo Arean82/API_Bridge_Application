@@ -15,6 +15,7 @@ class CreateTemplateController {
         
         this.sources = [];
         this.clientUrl = '';
+        this.executionMode = 'push';
         this.clientAuthType = 'none';
         this.clientAuthToken = '';
         this.clientTimeout = 30;
@@ -55,6 +56,11 @@ class CreateTemplateController {
         this.clientPane = document.getElementById('clientPane');
         this.toggleRightFullBtn = document.getElementById('toggleRightFullBtn');
         this.clientUrlInput = document.getElementById('clientUrl');
+        this.executionModeSelect = document.getElementById('executionMode');
+        this.clientUrlWrapper = document.getElementById('clientUrlWrapper');
+        this.pullEndpointWrapper = document.getElementById('pullEndpointWrapper');
+        this.pullEndpointUrl = document.getElementById('pullEndpointUrl');
+        this.scheduleIntervalWrapper = document.getElementById('scheduleInterval')?.parentElement;
         this.clientAuthTypeSelect = document.getElementById('clientAuthType');
         this.clientAuthTokenWrapper = document.getElementById('clientAuthTokenWrapper');
         this.clientAuthTokenInput = document.getElementById('clientAuthToken');
@@ -96,13 +102,14 @@ class CreateTemplateController {
         this.fullPaneBackdrop.addEventListener('click', () => { this.fullLeft = false; this.fullRight = false; this.renderPanes(); });
 
         this.clientUrlInput.addEventListener('input', (e) => { this.clientUrl = e.target.value; });
+        if(this.executionModeSelect) this.executionModeSelect.addEventListener('change', (e) => { this.executionMode = e.target.value; this.renderMode(); });
         this.clientAuthTypeSelect.addEventListener('change', (e) => { 
             this.clientAuthType = e.target.value;
             this.clientAuthTokenWrapper.style.display = this.clientAuthType === 'bearer' ? 'block' : 'none';
         });
         this.clientAuthTokenInput.addEventListener('input', (e) => { this.clientAuthToken = e.target.value; });
         
-        this.scheduleIntervalInput.addEventListener('input', (e) => { this.scheduleInterval = parseInt(e.target.value) || 60; });
+        this.scheduleIntervalInput.addEventListener('input', (e) => { this.scheduleInterval = Math.max(1, parseInt(e.target.value) || 60); });
         this.clientTimeoutInput.addEventListener('input', (e) => { this.clientTimeout = parseInt(e.target.value) || 30; });
         this.clientRetriesInput.addEventListener('input', (e) => { this.clientRetries = parseInt(e.target.value) || 3; });
 
@@ -473,6 +480,7 @@ class CreateTemplateController {
                     auth_token: s.auth_token
                 })),
                 client_url: this.clientUrl,
+            execution_mode: this.executionMode,
                 client_auth_type: this.clientAuthType,
                 client_credentials: {
                     token: this.clientAuthType === 'bearer' ? this.clientAuthToken : null,
