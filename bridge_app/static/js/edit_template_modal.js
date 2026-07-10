@@ -227,7 +227,8 @@ class TemplateModalController {
     renderAll() {
         this.modalTitle.textContent = this.mode === 'edit' ? 'Edit Template' : 'Clone Template';
         this.templateNameInput.value = this.templateName;
-        this.editSourceWrapper.style.display = this.mode === 'clone' ? 'flex' : 'none';
+        this.editSourceWrapper.style.display = 'flex';
+        this.editSource = this.mode === 'clone';
         this.editSourceCheckbox.checked = this.editSource;
         this.addEndpointBtn.style.display = this.editSource ? 'inline-block' : 'none';
         
