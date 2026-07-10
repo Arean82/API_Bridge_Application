@@ -91,8 +91,10 @@ def get_api_docs():
         endpoints = []
         paths = docs.get('paths', {})
         for path_name, path_data in paths.items():
-            # Usually look for 'get' or 'post' for response schemas
-            method = path_data.get('get') or path_data.get('post')
+            # Look for any valid HTTP method for response/request schemas
+            method = (path_data.get('get') or path_data.get('post') or 
+                      path_data.get('put') or path_data.get('patch') or 
+                      path_data.get('delete'))
             if not method:
                 continue
                 
