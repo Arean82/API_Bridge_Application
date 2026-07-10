@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/controllers/connection_controller.py
-# Description: API routes for Swagger Connections and Mock server.
+# Description: API routes for managing Swagger connections.
 # ==================================================================
 
 from flask import request, jsonify, current_app
@@ -38,7 +38,8 @@ def add_connection():
     if conn.url and not conn.is_local_file:
         try:
             json_text, actual_url = fetch_swagger_json(conn.url)
-            conn.json_content = json_text
+            import json
+            conn.json_content = json.dumps(json_text) if isinstance(json_text, dict) else json_text
             conn.is_active = True
         except ValueError as e:
             conn.is_active = False
@@ -105,7 +106,8 @@ def update_connection(id):
     if conn.url and not conn.is_local_file:
         try:
             json_text, actual_url = fetch_swagger_json(conn.url)
-            conn.json_content = json_text
+            import json
+            conn.json_content = json.dumps(json_text) if isinstance(json_text, dict) else json_text
             conn.last_updated = datetime.utcnow()
             conn.is_active = True
         except ValueError as e:
@@ -147,7 +149,8 @@ def refresh_connection(id):
         
     try:
         json_text, actual_url = fetch_swagger_json(conn.url)
-        conn.json_content = json_text
+        import json
+        conn.json_content = json.dumps(json_text) if isinstance(json_text, dict) else json_text
         conn.last_updated = datetime.utcnow()
         db.session.commit()
         return jsonify(conn.to_dict())
@@ -170,7 +173,8 @@ def toggle_connection(id):
         # Trying to enable. Must fetch docs first to ensure it's valid.
         try:
             json_text, actual_url = fetch_swagger_json(conn.url)
-            conn.json_content = json_text
+            import json
+            conn.json_content = json.dumps(json_text) if isinstance(json_text, dict) else json_text
             conn.last_updated = datetime.utcnow()
             conn.is_active = True
         except Exception as e:

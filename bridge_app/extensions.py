@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/extensions.py
-# Description: Initializes Flask extensions like SQLAlchemy and APScheduler.
+# Description: Flask extensions initialization (db, scheduler, etc).
 # ==================================================================
 
 from flask_sqlalchemy import SQLAlchemy

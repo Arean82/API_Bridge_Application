@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/utils/errors.py
-# Description: Custom exceptions and global error handler registration.
+# Description: Custom error classes and exception handlers.
 # ==================================================================
 
 from flask import jsonify

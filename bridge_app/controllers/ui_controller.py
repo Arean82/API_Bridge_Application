@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/controllers/ui_controller.py
-# Description: Web routes for rendering the dashboard UI.
+# Description: Routes for serving frontend HTML templates.
 # ==================================================================
 
 from flask import Blueprint, render_template

@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/controllers/job_controller.py
-# Description: API routes for Job management.
+# Description: API routes for managing background jobs.
 # ==================================================================
 
 from flask import request, jsonify, current_app

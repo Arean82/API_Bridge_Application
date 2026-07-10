@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/controllers/pull_controller.py
-# Description: API routes for REST/GraphQL pulling and Swagger generation.
+# Description: Logic for REST and GraphQL pull execution modes.
 # ==================================================================
 
 from flask import request, jsonify, render_template_string, abort

@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/services/graphql_service.py
-# Description: Service for generating and executing GraphQL schemas dynamically.
+# Description: Service for parsing and executing GraphQL queries.
 # ==================================================================
 
 import json

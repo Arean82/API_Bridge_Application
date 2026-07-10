@@ -23,4 +23,4 @@ dist/
 # Project Specific
 scratch/
 sample/
-instance/bridge_app.db
+instance/

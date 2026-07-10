@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/engine/task_runner.py
-# Description: Core engine logic for fetching, mapping, and pushing data.
+# Description: APScheduler background task executor for jobs.
 # ==================================================================
 
 from bridge_app.models import JobModel, TemplateModel

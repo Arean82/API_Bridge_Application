@@ -53,10 +53,14 @@
         <!-- RIGHT PANE: Client Config -->
         {% include 'partials/client_pane.html' %}
     </div>
+
+    <!-- Add Connection Modal (for creating JSON/URL connections inline) -->
+    {% include 'partials/add_connection_modal.html' %}
 </div>
 
 <!-- SortableJS with Fallback -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 <script>window.Sortable || document.write(`<script src="{{ url_for('static', filename='vendor/Sortable.min.js') }}"><\/script>`)</script>
+<script type="module" src="{{ url_for('static', filename='js/connections.js') }}"></script>
 <script type="module" src="{{ url_for('static', filename='js/create_template.js') }}"></script>
 {% endblock %}

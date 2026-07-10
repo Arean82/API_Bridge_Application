@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/models/job_log.py
-# Description: SQLAlchemy model for logging per-customer engine jobs.
+# Description: Database model for logging job execution history.
 # ==================================================================
 
 from bridge_app.extensions import db

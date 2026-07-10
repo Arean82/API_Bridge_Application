@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/services/swagger_utils.py
-# Description: Swagger/OpenAPI utilities — URL fixing, JSON fetching,
+# Description: Helper functions for Swagger spec analysis.
 #              and background connection refresh.
 # ==================================================================
 

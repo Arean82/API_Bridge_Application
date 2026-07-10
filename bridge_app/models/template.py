@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/models/template.py
-# Description: 
+# Description: Database model for execution templates and field mappings.
 # ==================================================================
 
 from datetime import datetime
@@ -16,13 +16,13 @@ class TemplateModel(db.Model):
     # Partner Config
     partner_url = db.Column(db.String(255), nullable=True)
     _partner_auth_token = db.Column('partner_auth_token', db.String(255), nullable=True)
-    _sources_json = db.Column('sources_json', db.Text, default='[]') # Array of {name, url, auth_token}
+    _sources_json = db.Column('sources_json', db.Text, nullable=False, default='[]') # Array of {name, url, auth_token}
     
     # Client Config
     client_name = db.Column(db.String(100), nullable=True)
     client_url = db.Column(db.String(255), nullable=True)
     client_auth_type = db.Column(db.String(50), default='none')
-    _client_credentials_json = db.Column('client_credentials_json', db.Text, default='{}')
+    _client_credentials_json = db.Column('client_credentials_json', db.Text, nullable=False, default='{}')
     execution_mode = db.Column(db.String(50), default='push')
 
     @property
@@ -48,7 +48,27 @@ class TemplateModel(db.Model):
     @sources_json.setter
     def sources_json(self, value):
         from bridge_app.services.encryption import encrypt_token
-        self._sources_json = encrypt_token(value)
+        
+        if not value:
+            raise ValueError("Sources cannot be empty.")
+            
+        try:
+            parsed = json.loads(value) if isinstance(value, str) else value
+            value_str = value if isinstance(value, str) else json.dumps(value)
+            
+            if not parsed:
+                raise ValueError("Sources array cannot be empty.")
+                
+            for idx, src in enumerate(parsed):
+                if not src.get('selectedApi'):
+                    raise ValueError(f"Endpoint {idx+1} must have a selected API endpoint.")
+                if not src.get('url'):
+                    raise ValueError(f"Endpoint {idx+1} must have a Source URL.")
+                    
+        except json.JSONDecodeError:
+            raise ValueError("Invalid sources JSON format.")
+            
+        self._sources_json = encrypt_token(value_str)
         
     @property
     def client_credentials_json(self):
@@ -59,9 +79,9 @@ class TemplateModel(db.Model):
     def client_credentials_json(self, value):
         from bridge_app.services.encryption import encrypt_token
         self._client_credentials_json = encrypt_token(value)
-    
+
     # Field Mapping (Partner Field -> Client JSON Path)
-    field_mapping_json = db.Column(db.Text, default='{}')
+    field_mapping_json = db.Column(db.Text, nullable=False, default='{}')
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     

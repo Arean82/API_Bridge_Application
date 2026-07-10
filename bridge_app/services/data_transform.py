@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/services/data_transform.py
-# Description: Data transformation utilities for field mapping and
+# Description: Service for mapping and transforming JSON payloads.
 #              value casting used by the pull/push engine.
 # ==================================================================
 

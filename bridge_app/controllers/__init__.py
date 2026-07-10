@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/controllers/__init__.py
-# Description: Blueprint exports for controllers.
+# Description: Controller package initialization.
 # ==================================================================
 
 from .ui_controller import ui_bp

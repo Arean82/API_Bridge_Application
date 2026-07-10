@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/services/cleanup.py
-# Description: Background task for pruning old failed payloads.
+# Description: Background service for cleaning up old payloads and logs.
 # ==================================================================
 
 

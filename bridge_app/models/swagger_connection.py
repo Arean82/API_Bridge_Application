@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/models/swagger_connection.py
-# Description: Model for storing Swagger API Connections.
+# Description: Database model for API connections and Swagger specs.
 # ==================================================================
 
 from bridge_app.extensions import db

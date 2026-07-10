@@ -291,7 +291,10 @@ class CreateTemplateController {
                 <h4 class="font-bold text-sm mb-4 theme-text-muted">ENDPOINT <span>${idx + 1}</span></h4>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium mb-1">Swagger Connection</label>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="block text-sm font-medium">Swagger Connection</label>
+                            <button class="text-indigo-600 hover:text-indigo-800 text-xs font-semibold new-conn-btn" type="button">+ New Connection (JSON/URL)</button>
+                        </div>
                         <select class="theme-input w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 src-conn-sel" data-idx="${idx}">
                             <option value="">-- Select Connection --</option>
                             ${this.swaggerConnections.map(c => `<option value="${c.id}" ${src.connectionId == c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
@@ -319,6 +322,16 @@ class CreateTemplateController {
             if (this.sources.length > 1) {
                 div.querySelector('.remove-src-btn').addEventListener('click', (e) => { e.preventDefault(); this.removeSource(parseInt(e.currentTarget.dataset.idx)); });
             }
+            div.querySelector('.new-conn-btn').addEventListener('click', (e) => { 
+                e.preventDefault();
+                if(window.connectionsManager) {
+                    window.connectionsManager.newConn = window.connectionsManager.getEmptyConn();
+                    window.connectionsManager.populateForm();
+                    window.connectionsManager.openModal();
+                } else {
+                    alert("Connections manager not loaded.");
+                }
+            });
             div.querySelector('.src-conn-sel').addEventListener('change', (e) => { this.sources[idx].connectionId = e.target.value; this.fetchApiDocs(idx); });
             div.querySelector('.src-api-sel').addEventListener('change', (e) => { 
                 this.sources[idx].selectedApi = e.target.value; 

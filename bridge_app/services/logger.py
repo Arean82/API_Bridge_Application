@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/engine/logger.py
-# Description: Utility for logging pull/push events and payload data.
+# Description: Centralized application logging configuration.
 # ==================================================================
 
 import json

@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/services/swagger_service.py
-# Description: Service for generating OpenAPI 3.0.3 specs and Swagger UI HTML.
+# Description: Service for fetching, parsing, and processing Swagger/OpenAPI files.
 # ==================================================================
 
 import json

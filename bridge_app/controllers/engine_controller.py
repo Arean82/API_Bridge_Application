@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/controllers/engine_controller.py
-# Description: Internal API endpoints for managing configurations and scheduling.
+# Description: Core engine routes for executing templates.
 # ==================================================================
 
 from flask import Blueprint, request, jsonify, current_app
@@ -72,7 +72,11 @@ def get_api_docs():
                     with open(conn.local_file_path, 'r') as f:
                         docs = json.load(f)
                 except:
-                    pass
+                    if conn.json_content:
+                        try:
+                            docs = json.loads(conn.json_content)
+                        except:
+                            pass
             elif conn.json_content:
                 try:
                     docs = json.loads(conn.json_content)

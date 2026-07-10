@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/app.py
-# Description: Main entry point and factory for the Flask application.
+# Description: Application factory and setup.
 # ==================================================================
 
 from flask import Flask
