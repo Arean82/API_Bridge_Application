@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Swagger UI - {{ conn.name }}</title>
-    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
+    <!-- Swagger UI CSS with Fallback -->
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" onerror="this.onerror=null; this.href=`{{ url_for('static', filename='vendor/swagger-ui.css') }}`;" />
     <style>
       html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
       *, *:before, *:after { box-sizing: inherit; }
@@ -16,8 +17,12 @@
     <script id="swagger-data" type="application/json">
         {{ (conn.json_content or '{}') | tojson | safe }}
     </script>
+    <!-- Swagger UI JS with Fallback -->
     <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js" crossorigin></script>
+    <script>window.SwaggerUIBundle || document.write(`<script src="{{ url_for('static', filename='vendor/swagger-ui-bundle.js') }}"><\/script>`)</script>
+
     <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-standalone-preset.js" crossorigin></script>
+    <script>window.SwaggerUIStandalonePreset || document.write(`<script src="{{ url_for('static', filename='vendor/swagger-ui-standalone-preset.js') }}"><\/script>`)</script>
     <script>
         window.onload = function() {
             let spec = null;
