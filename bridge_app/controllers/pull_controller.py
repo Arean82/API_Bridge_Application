@@ -1,0 +1,179 @@
+# ==================================================================
+# File: bridge_app/controllers/pull_controller.py
+# Description: API routes for REST/GraphQL pulling and Swagger generation.
+# ==================================================================
+
+from flask import request, jsonify, render_template_string, abort
+import json
+from bridge_app.controllers.engine_controller import api_bp
+
+@api_bp.route('/bridge/pull/<template_slug>', methods=['GET'])
+def pull_endpoint_rest(template_slug):
+    """
+    Auto-generated REST endpoint for Pull-mode templates.
+    ---
+    tags:
+      - Pull Endpoints
+    parameters:
+      - name: template_slug
+        in: path
+        type: string
+        required: true
+    responses:
+      200:
+        description: Translated payload
+    """
+    from bridge_app.models.template import TemplateModel
+    from flask import request, abort
+    
+    all_templates = TemplateModel.query.all()
+    template = next((t for t in all_templates if t.slug == template_slug), None)
+    if not template:
+        abort(404)
+    template_id = template.id
+    if template.execution_mode != 'pull_rest':
+        from bridge_app.utils.errors import APIError
+        raise APIError('Template is not configured for REST Pull mode', 400)
+        
+    # Check Auth
+    import json
+    client_creds = json.loads(template.client_credentials_json or '{}')
+    expected_token = client_creds.get('token')
+    if expected_token:
+        auth_header = request.headers.get('Authorization', '')
+        if not auth_header.startswith('Bearer ') or auth_header.split(' ')[1] != expected_token:
+            from bridge_app.utils.errors import APIError
+            raise APIError('Unauthorized', 401)
+            
+    # Execute mapping
+    from bridge_app.services.task_runner import execute_template_mapping
+    from opentelemetry import trace
+    tracer = trace.get_tracer(__name__)
+    with tracer.start_as_current_span("pull_rest_request") as span:
+        span.set_attribute("template.id", template_id)
+        result = execute_template_mapping(template_id)
+        
+    if result is None:
+        from bridge_app.utils.errors import APIError
+        raise APIError('Failed to execute mapping', 500)
+        
+    from flask import jsonify
+    return jsonify(result)
+
+
+
+
+
+
+
+@api_bp.route('/graphql/<template_slug>', methods=['GET', 'POST'])
+def pull_endpoint_graphql(template_slug):
+    from bridge_app.models.template import TemplateModel
+    from flask import request, render_template_string, abort
+    
+    all_templates = TemplateModel.query.all()
+    template = next((t for t in all_templates if t.slug == template_slug), None)
+    if not template:
+        abort(404)
+    template_id = template.id
+    if template.execution_mode != 'pull_graphql':
+        from bridge_app.utils.errors import APIError
+        raise APIError('Template is not configured for GraphQL Pull mode', 400)
+        
+    # GET request - serve the GraphQL Playground IDE
+    if request.method == 'GET':
+        return render_template_string("""
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset=utf-8/>
+              <title>GraphQL Playground</title>
+              <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/graphql-playground-react/build/static/css/index.css" />
+              <link rel="shortcut icon" href="https://cdn.jsdelivr.net/npm/graphql-playground-react/build/favicon.png" />
+              <script src="https://cdn.jsdelivr.net/npm/graphql-playground-react/build/static/js/middleware.js"></script>
+            </head>
+            <body>
+              <div id="root">
+                <style>
+                  body { margin: 0; background-color: #172a3a; font-family: Open Sans, sans-serif; height: 100vh; }
+                  #root { height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; }
+                  .loading { font-size: 32px; font-weight: 200; color: rgba(255, 255, 255, .6); margin-left: 20px; }
+                  img { width: 78px; height: 78px; }
+                  .title { font-weight: 400; }
+                </style>
+                <img src='https://cdn.jsdelivr.net/npm/graphql-playground-react/build/logo.png' alt=''>
+                <div class="loading"> Loading
+                  <span class="title">GraphQL Playground</span>
+                </div>
+              </div>
+              <script>window.addEventListener('load', function (event) {
+                  GraphQLPlayground.init(document.getElementById('root'), {
+                    endpoint: window.location.href
+                  })
+                })</script>
+            </body>
+            </html>
+            """)
+
+    # POST request - execute query
+    # Check Auth
+    import json
+    client_creds = json.loads(template.client_credentials_json or '{}')
+    expected_token = client_creds.get('token')
+    if expected_token:
+        auth_header = request.headers.get('Authorization', '')
+        if not auth_header.startswith('Bearer ') or auth_header.split(' ')[1] != expected_token:
+            from bridge_app.utils.errors import APIError
+            raise APIError('Unauthorized', 401)
+            
+    # Execute mapping
+    from bridge_app.services.task_runner import execute_template_mapping
+    from opentelemetry import trace
+    tracer = trace.get_tracer(__name__)
+    with tracer.start_as_current_span("pull_graphql_request") as span:
+        span.set_attribute("template.id", template_id)
+        result = execute_template_mapping(template_id)
+        
+    if result is None:
+        from bridge_app.utils.errors import APIError
+        raise APIError('Failed to execute mapping', 500)
+        
+    # GraphQL Execution
+    query = request.json.get('query')
+    from bridge_app.services.graphql_service import execute_graphql_query
+    try:
+        response = execute_graphql_query(template, query, result)
+        from flask import jsonify
+        return jsonify(response)
+    except ValueError as e:
+        from bridge_app.utils.errors import APIError
+        raise APIError(str(e), 400)
+
+
+
+@api_bp.route('/bridge/pull/<template_slug>/spec', methods=['GET'])
+def pull_endpoint_swagger_spec(template_slug):
+    from bridge_app.models.template import TemplateModel
+    from flask import jsonify, abort
+    all_templates = TemplateModel.query.all()
+    template = next((t for t in all_templates if t.slug == template_slug), None)
+    if not template:
+        abort(404)
+        
+    from bridge_app.services.swagger_service import generate_pull_endpoint_swagger_spec
+    spec = generate_pull_endpoint_swagger_spec(template)
+    return jsonify(spec)
+
+@api_bp.route('/bridge/pull/<template_slug>/docs', methods=['GET'])
+def pull_endpoint_swagger_ui(template_slug):
+    from bridge_app.models.template import TemplateModel
+    from flask import render_template_string, abort
+    all_templates = TemplateModel.query.all()
+    template = next((t for t in all_templates if t.slug == template_slug), None)
+    if not template:
+        abort(404)
+        
+    from bridge_app.services.swagger_service import get_swagger_ui_html
+    html = get_swagger_ui_html(template.name, template_slug)
+    return render_template_string(html)
+

@@ -15,7 +15,7 @@ This application adheres to a clean, scalable **Model-View-Controller + Service 
 ## Advanced Features
 - **AES-256-GCM Token Encryption**: All API auth tokens are safely encrypted in the database at rest using a 256-bit Master Key generated in your `.env` file.
 - **OpenTelemetry Observability (OTLP)**: Natively instruments application traces and exports them via OTLP (compatible with Jaeger, Zabbix, or Datadog) using `config.ini`.
-- **CORS-Enabled Mock Server**: Automatically generates functional `/api/mock/<id>/<path>` REST endpoints from Swagger configurations to serve static JSON examples to external frontends.
+- **CORS-Enabled Mock Server**: Automatically generates functional `/api/mock/<id>/<path>` REST endpoints from OpenAPI 3.0.3 / Swagger configurations to serve static JSON examples to external frontends.
 - **Dynamic Environments**: Configure multiple environment URLs (Dev/Staging/Prod) per connection and seamlessly switch between them in the UI.
 
 ## Quick Start

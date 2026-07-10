@@ -69,6 +69,10 @@ def create_app(config_class=Config):
     app.register_blueprint(api_bp)
     app.register_blueprint(obs_bp)
 
+    # Register Global Error Handlers
+    from bridge_app.utils.errors import register_error_handlers
+    register_error_handlers(app)
+
     from bridge_app.config import get_theme
     @app.context_processor
     def inject_theme():
@@ -83,7 +87,8 @@ def create_app(config_class=Config):
         db.create_all()
         
         from bridge_app.models import JobModel
-        from bridge_app.services.task_runner import pull_and_push_job, update_swagger_connections
+        from bridge_app.services.task_runner import pull_and_push_job
+        from bridge_app.services.swagger_utils import update_swagger_connections
         jobs = JobModel.query.filter_by(is_active=True).all()
         for job in jobs:
             job_id = f"job_{job.id}"
@@ -109,7 +114,7 @@ def create_app(config_class=Config):
             **trigger_kwargs
         )
 
-        from bridge_app.services.task_runner import cleanup_failed_payloads
+        from bridge_app.services.cleanup import cleanup_failed_payloads
         # Schedule the background cleanup for failed payloads (e.g., every 5 minutes)
         scheduler.add_job(
             id='failed_payloads_cleanup',

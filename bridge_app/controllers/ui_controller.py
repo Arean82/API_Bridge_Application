@@ -16,7 +16,7 @@ def jobs_page():
 @ui_bp.route('/docs/<int:id>')
 def swagger_docs(id):
     from bridge_app.models import SwaggerConnection
-    from bridge_app.controllers.engine_controller import fix_swagger_urls
+    from bridge_app.services.swagger_utils import fix_swagger_urls
     import json
     conn = SwaggerConnection.query.get_or_404(id)
     
