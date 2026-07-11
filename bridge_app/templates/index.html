@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div x-data="scheduleDashboard()" class="h-full flex flex-col">
+<div id="scheduleDashboardContainer" class="h-full flex flex-col">
     <!-- Header -->
     <div class="flex justify-between items-center mb-8">
         <div>
@@ -27,42 +27,17 @@
                         <th class="p-4 text-right" style="border-top-right-radius: inherit;">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-black/5">
-                    <template x-for="job in activeJobs" :key="job.id">
-                        <tr class="hover:bg-black/5 transition">
-                            <td class="p-4 font-semibold" x-text="job.client_name || 'N/A'"></td>
-                            <td class="p-4 theme-text-muted" x-text="job.template_name || 'Unknown'"></td>
-                            <td class="p-4">
-                                <span class="px-2.5 py-1 text-xs font-medium rounded-full border border-black/10" 
-                                      :class="job.is_active ? 'text-green-600 bg-green-500/10' : 'text-red-500 bg-red-500/10'"
-                                      x-text="job.is_active ? 'Running' : 'Stopped'"></span>
-                            </td>
-                            <td class="p-4 theme-text-muted font-mono">Every <span x-text="job.schedule_interval"></span>s</td>
-                            <td class="p-4 theme-text-muted font-mono" x-text="job.last_run ? new Date(job.last_run).toLocaleString() : 'Never'"></td>
-                            <td class="p-4 text-right space-x-2">
-                                <button @click="toggleJob(job)" class="font-medium px-2 py-1 rounded transition text-sm opacity-75 hover:opacity-100"
-                                        x-text="job.is_active ? 'Stop' : 'Start'"></button>
-                                <button @click="deleteJob(job.id)" class="text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded transition text-sm">
-                                    Delete
-                                </button>
-                            </td>
-                        </tr>
-                    </template>
-                    
-                    <tr x-show="activeJobs.length === 0">
-                        <td colspan="6" class="p-12 text-center theme-text-muted">
-                            <svg class="mx-auto h-12 w-12 opacity-50 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <p class="text-lg font-medium" style="color: var(--text-main);">No active schedules found.</p>
-                            <p class="mt-1">Go to the Create Template page to set up a new feed.</p>
-                        </td>
+                <tbody id="dashboardTableBody" class="divide-y divide-black/5"
+                       hx-get="/htmx/dashboard/status"
+                       hx-trigger="load, every 5s"
+                       hx-swap="innerHTML">
+                    <!-- HTMX will load the content here -->
+                    <tr>
+                        <td colspan="6" class="p-12 text-center theme-text-muted">Loading...</td>
                     </tr>
                 </tbody>
             </table>
         </div>
     </div>
 </div>
-
-<script src="{{ url_for('static', filename='js/index.js') }}"></script>
 {% endblock %}

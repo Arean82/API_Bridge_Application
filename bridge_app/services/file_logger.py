@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/services/file_logger.py
-# Description: 
+# Description: File-based logging utility service.
 # ==================================================================
 
 import os

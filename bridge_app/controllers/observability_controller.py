@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/controllers/observability_controller.py
-# Description: Exposes /metrics and /health endpoints for Zabbix monitoring.
+# Description: Routes for system health and monitoring.
 # ==================================================================
 
 from flask import Blueprint, jsonify

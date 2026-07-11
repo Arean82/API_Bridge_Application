@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/models/job.py
-# Description: 
+# Description: Database model for scheduled execution jobs.
 # ==================================================================
 
 from datetime import datetime

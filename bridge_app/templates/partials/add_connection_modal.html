@@ -1,66 +1,78 @@
 <!-- Create Modal -->
-<div x-show="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display: none;">
-    <div class="theme-panel p-6 max-w-lg w-full m-4">
-        <h3 class="text-xl font-bold mb-4" x-text="newConn.id ? 'Edit Swagger Connection' : 'Add Swagger Connection'"></h3>
+<div id="addConnectionModal" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center">
+    <!-- Backdrop -->
+    <div id="addConnectionBackdrop" class="absolute inset-0 -z-10 [background:var(--overlay-bg)] [backdrop-filter:var(--backdrop)]"></div>
+
+    <!-- Modal Content -->
+    <div class="theme-panel p-4 max-w-3xl w-full m-4 relative z-10">
         
-        <div class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Left Column -->
             <div>
-                <label class="block text-sm font-medium mb-1">Connection Name</label>
-                <input type="text" x-model="newConn.name" class="theme-input w-full p-2" placeholder="e.g. Partner Tracking API">
+                <h3 id="addConnectionTitle" class="text-base font-bold mb-3">Add Swagger Connection</h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-medium mb-1">Connection Name</label>
+                        <input type="text" id="connName" class="theme-input w-full p-1.5 text-sm" placeholder="e.g. Partner Tracking API">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-xs font-medium mb-1">Source Type</label>
+                        <select id="connIsLocalFile" class="theme-input w-full p-1.5 text-sm">
+                            <option value="false">Remote URL</option>
+                            <option value="true">Upload Local JSON File</option>
+                        </select>
+                    </div>
+
+                    <div id="connRemoteSection">
+                        <label class="block text-xs font-medium mb-1">Swagger JSON URL</label>
+                        <input type="text" id="connUrl" class="theme-input w-full p-1.5 text-sm" placeholder="https://api.partner.com/docs.json">
+                    </div>
+
+                    <div id="connLocalSection" style="display: none;">
+                        <label class="block text-xs font-medium mb-1">Base API URL <span class="text-red-500">*</span></label>
+                        <input type="text" id="connBaseUrl" class="theme-input w-full p-1.5 text-sm mb-2" placeholder="https://api.partner.com">
+                        
+                        <label class="block text-xs font-medium mb-1">Upload Local File</label>
+                        <input type="file" id="connFileInput" accept=".json" class="theme-input w-full p-1.5 text-xs">
+                        <p id="connFileStatus" class="text-xs theme-text-muted mt-1"></p>
+                    </div>
+                </div>
             </div>
             
-            <div>
-                <label class="block text-sm font-medium mb-1">Source Type</label>
-                <select x-model="newConn.is_local_file" class="theme-input w-full p-2">
-                    <option value="false">Remote URL</option>
-                    <option value="true">Upload Local JSON File</option>
-                </select>
-            </div>
-
-            <div x-show="newConn.is_local_file == 'false' || newConn.is_local_file === false">
-                <label class="block text-sm font-medium mb-1">Swagger JSON URL</label>
-                <input type="text" x-model="newConn.url" class="theme-input w-full p-2" placeholder="https://api.partner.com/docs.json">
-            </div>
-
-            <div x-show="newConn.is_local_file == 'true' || newConn.is_local_file === true">
-                <label class="block text-sm font-medium mb-1">Base API URL <span class="text-red-500">*</span></label>
-                <input type="text" x-model="newConn.url" class="theme-input w-full p-2 mb-3" placeholder="https://api.partner.com">
+            <!-- Right Column -->
+            <div class="pt-8">
+                <h4 class="text-sm font-semibold mb-2">Advanced Settings (Optional)</h4>
                 
-                <label class="block text-sm font-medium mb-1">Upload Local File</label>
-                <input type="file" @change="handleFileUpload" accept=".json" class="theme-input w-full p-2 text-sm">
-                <p class="text-xs theme-text-muted mt-1" x-text="newConn.local_file_path ? 'File ready: ' + newConn.local_file_path : ''"></p>
-            </div>
-            
-            <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-                <h4 class="text-md font-semibold mb-3">Advanced Settings (Optional)</h4>
-                
-                <div class="mb-3">
-                    <label class="block text-sm font-medium mb-1">Authorization Token (Bearer/API Key)</label>
-                    <input type="password" x-model="newConn.auth_token" class="theme-input w-full p-2" placeholder="Bearer eyJhbGciOiJIUzI1...">
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-medium mb-1">Authorization Token (Bearer/API Key)</label>
+                        <input type="password" id="connAuthToken" class="theme-input w-full p-1.5 text-sm" placeholder="Bearer eyJhbGciOiJIUzI1...">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-xs font-medium mb-1">Auto-Sync Schedule</label>
+                        <select id="connSyncSchedule" class="theme-input w-full p-1.5 text-sm">
+                            <option value="">None (Manual Refresh Only)</option>
+                            <option value="hourly">Every Hour</option>
+                            <option value="daily">Every Day</option>
+                            <option value="weekly">Every Week</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-xs font-medium mb-1">Custom Environments (JSON array of URLs)</label>
+                        <input type="text" id="connEnvironments" class="theme-input w-full p-1.5 text-sm" placeholder='["https://dev.api.com", "https://prod.api.com"]'>
+                    </div>
                 </div>
                 
-                <div class="mb-3">
-                    <label class="block text-sm font-medium mb-1">Auto-Sync Schedule</label>
-                    <select x-model="newConn.sync_schedule" class="theme-input w-full p-2">
-                        <option value="">None (Manual Refresh Only)</option>
-                        <option value="hourly">Every Hour</option>
-                        <option value="daily">Every Day</option>
-                        <option value="weekly">Every Week</option>
-                    </select>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium mb-1">Custom Environments (JSON array of URLs)</label>
-                    <input type="text" x-model="newConn.environments" class="theme-input w-full p-2" placeholder='["https://dev.api.com", "https://prod.api.com"]'>
+                <div class="flex justify-end space-x-2 mt-6">
+                    <button id="cancelConnectionBtn" class="px-3 py-1.5 border border-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-sm">Cancel</button>
+                    <button id="saveConnectionBtn" class="theme-btn px-3 py-1.5 text-sm">
+                        <span id="saveConnectionText">Save Connection</span>
+                    </button>
                 </div>
             </div>
-        </div>
-        
-        <div class="flex justify-end space-x-3 mt-6">
-            <button @click="showModal = false" class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-800">Cancel</button>
-            <button @click="saveConnection()" class="theme-btn px-4 py-2" :disabled="loading">
-                <span x-text="loading ? 'Saving...' : 'Save Connection'"></span>
-            </button>
         </div>
     </div>
 </div>

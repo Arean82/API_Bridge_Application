@@ -64,11 +64,11 @@ Simply edit the `config.ini` file in the root directory to point the `exporter_e
 
 ### 1. The API Mock Server (For Frontend Developers)
 If you are building a frontend (like a React or Vue app) and you need to test it against an API that isn't finished yet, you can use the built-in **Mock Server**.
-- Every Swagger Connection you save automatically generates a live REST API endpoint at: `http://127.0.0.1:5000/api/mock/<connection_id>/<your_path>`
+- Every OpenAPI 3.0.3 / Swagger Connection you save automatically generates a live REST API endpoint at: `http://127.0.0.1:5000/api/mock/<connection_id>/<your_path>`
 - **CORS** is fully enabled, meaning your external React/Vue app can fetch data from this URL without getting blocked by the browser.
 
 ### 2. Custom Environments
-In the "Advanced Settings" tab when adding a Swagger connection, you can define a custom JSON array of environment URLs.
+In the "Advanced Settings" tab when adding an OpenAPI 3.0.3 / Swagger connection, you can define a custom JSON array of environment URLs.
 - Example: `[{"name": "Production", "url": "https://api.prod.com"}, {"name": "Staging", "url": "https://api.stage.com"}]`
 - Once saved, a dropdown will appear in the UI allowing you to instantly switch between testing against Staging or Production.
 

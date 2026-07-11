@@ -1,13 +1,13 @@
 # ==================================================================
 # File: scripts/add_header.py
-# Description: Automatically adds standard headers to Python files.
+# Description: Utility script to automatically prepend standard headers to Python files.
 # ==================================================================
 
 import os
 
 HEADER_TEMPLATE = """# ==================================================================
 # File: {filepath}
-# Description: 
+# Description: Utility script to automatically prepend standard headers to Python files.
 # ==================================================================
 
 """

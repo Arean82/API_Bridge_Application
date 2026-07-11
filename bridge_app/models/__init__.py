@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/models/__init__.py
-# Description: Model exports.
+# Description: Models package initialization.
 # ==================================================================
 
 from .template import TemplateModel

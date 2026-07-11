@@ -4,10 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Universal API Bridge</title>
+    <!-- Tailwind CSS with Local Fallback -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
+    <script>window.tailwind || document.write(`<script src="{{ url_for('static', filename='vendor/tailwindcss.js') }}"><\/script>`)</script>
+
+    <!-- HTMX with Local Fallback -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script>window.htmx || document.write(`<script src="{{ url_for('static', filename='vendor/htmx.min.js') }}"><\/script>`)</script>
+
+    <!-- Highlight.js with Local Fallback -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css" onerror="this.onerror=null; this.href=`{{ url_for('static', filename='vendor/highlight-default.min.css') }}`;">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <script>window.hljs || document.write(`<script src="{{ url_for('static', filename='vendor/highlight.min.js') }}"><\/script>`)</script>
     <script>
         tailwind.config = {
             darkMode: 'class'
@@ -16,7 +24,7 @@
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
-<body x-data="themeManager('{{ current_theme }}')" :data-theme="currentTheme" class="font-sans antialiased">
+<body data-initial-theme="{{ current_theme }}" data-theme="{{ current_theme }}" class="font-sans antialiased">
     
     <nav class="theme-nav p-4 flex justify-between items-center">
         <div class="flex items-center space-x-6">
@@ -30,7 +38,7 @@
         </div>
         <div class="flex items-center space-x-4">
             <!-- Theme Color Selector (Original) -->
-            <select x-model="currentTheme" @change="saveTheme" class="bg-white text-black text-sm rounded-md border border-gray-300 p-1 cursor-pointer">
+            <select id="themeSelector" class="bg-white text-black text-sm rounded-md border border-gray-300 p-1 cursor-pointer">
                 <option value="default">Default Light</option>
                 <option value="glass">Glassmorphism</option>
                 <option value="clay">Claymorphism</option>
@@ -38,10 +46,10 @@
             </select>
             
             <!-- Dark/Light/Auto Toggle Icon -->
-            <button @click="toggleMode" class="text-xl focus:outline-none" title="Toggle Dark/Light/Auto Mode">
-                <span x-show="colorMode === 'auto'">🖥️</span>
-                <span x-show="colorMode === 'light'">☀️</span>
-                <span x-show="colorMode === 'dark'">🌙</span>
+            <button id="modeToggleBtn" class="text-xl focus:outline-none" title="Toggle Dark/Light/Auto Mode">
+                <span id="modeIconAuto" style="display:none;">🖥️</span>
+                <span id="modeIconLight" style="display:none;">☀️</span>
+                <span id="modeIconDark" style="display:none;">🌙</span>
             </button>
         </div>
     </nav>
@@ -49,7 +57,9 @@
     <div class="container mx-auto mt-8 p-4">
         {% block content %}{% endblock %}
     </div>
-
-    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/push_handler.js') }}?v=4"></script>
+    <script src="{{ url_for('static', filename='js/pull_rest_handler.js') }}?v=4"></script>
+    <script src="{{ url_for('static', filename='js/pull_graphql_handler.js') }}?v=4"></script>
+    <script type="module" src="{{ url_for('static', filename='js/theme.js') }}?v=4"></script>
 </body>
 </html>

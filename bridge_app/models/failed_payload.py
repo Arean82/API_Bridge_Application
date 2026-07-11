@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/models/failed_payload.py
-# Description: Stores JSON payloads that failed to push after max retries.
+# Description: Database model for tracking failed payload deliveries.
 # ==================================================================
 
 from bridge_app.extensions import db
