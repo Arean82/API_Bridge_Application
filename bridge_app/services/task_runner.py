@@ -225,8 +225,7 @@ def execute_template_mapping(template_id, destination_slug=None):
         mapping = []
         if destination_slug:
             for d in destinations:
-                d_slug = d.get('name', '').lower().replace(' ', '_').replace('-', '_')
-                d_slug = ''.join(e for e in d_slug if e.isalnum() or e == '_')
+                d_slug = re.sub(r'[^a-z0-9]', '_', d.get('name', '').lower())
                 if d_slug == destination_slug:
                     mapping = d.get('field_mapping', [])
                     break

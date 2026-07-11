@@ -82,6 +82,33 @@ def pull_endpoint_rest(template_slug, dest_slug):
 
 
 
+@api_bp.route('/graphql/<template_slug>', methods=['GET'])
+def pull_endpoint_graphql_redirect(template_slug):
+    """Redirect to the first destination's GraphQL Playground when no dest_slug is provided."""
+    import re, json
+    from bridge_app.models.template import TemplateModel
+    from flask import redirect, url_for, abort
+    
+    all_templates = TemplateModel.query.all()
+    template = next((t for t in all_templates if t.slug == template_slug), None)
+    if not template:
+        abort(404)
+    if template.execution_mode != 'pull_graphql':
+        from bridge_app.utils.errors import APIError
+        raise APIError('Template is not configured for GraphQL Pull mode', 400)
+    
+    try:
+        dests = json.loads(template.destinations_json)
+    except:
+        dests = []
+    
+    if dests:
+        dest_name = dests[0].get('name', 'client')
+        dest_slug = re.sub(r'[^a-z0-9]', '_', dest_name.lower())
+    else:
+        dest_slug = 'default'
+    
+    return redirect(url_for('api.pull_endpoint_graphql', template_slug=template_slug, dest_slug=dest_slug))
 
 
 @api_bp.route('/graphql/<template_slug>/<dest_slug>', methods=['GET', 'POST'])

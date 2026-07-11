@@ -81,8 +81,7 @@ def execute_graphql_query(template, dest_slug, query, context_data):
     
     if dest_slug:
         for d in destinations:
-            d_slug = d.get('name', '').lower().replace(' ', '_').replace('-', '_')
-            d_slug = ''.join(e for e in d_slug if e.isalnum() or e == '_')
+            d_slug = re.sub(r'[^a-z0-9]', '_', d.get('name', '').lower())
             if d_slug == dest_slug:
                 field_mapping = d.get('field_mapping', [])
                 break
