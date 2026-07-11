@@ -62,6 +62,7 @@ class TemplateModalController {
         this.clientAuthTokenInput.addEventListener('input', (e) => this.clientAuthToken = e.target.value);
         this.editSourceCheckbox.addEventListener('change', (e) => {
             this.editSource = e.target.checked;
+            this.addEndpointBtn.style.display = this.editSource ? 'inline-block' : 'none';
             this.renderSources();
         });
     }
