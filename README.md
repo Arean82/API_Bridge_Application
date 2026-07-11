@@ -49,7 +49,7 @@ pip install -r requirements.txt
 
 ### 4. Running the Server
 ```bash
-python run.py
+python synora_connect.py
 ```
 Access the dashboard at `http://127.0.0.1:5000`
 

@@ -1,0 +1,56 @@
+<!-- HTML Modal for Docs (Client Side Markdown Rendering) -->
+<div id="docs-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog"
+    aria-modal="true">
+    <div class="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+            onclick="document.getElementById('docs-modal').classList.add('hidden')"></div>
+
+        <div
+            class="theme-panel relative transform overflow-hidden text-left transition-all sm:my-8 sm:w-full sm:max-w-4xl flex flex-col h-[80vh]">
+            <div class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4 flex flex-col h-full bg-transparent">
+                <div class="flex justify-between items-center mb-4 shrink-0">
+                    <div class="flex items-center space-x-4">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">README
+                        </h3>
+                        <!-- Manual Buttons for Specific Readme Files -->
+                        <button onclick="loadReadme('README.md')"
+                            class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-600">Main
+                            README</button>
+                        <button onclick="loadReadme('user_manual.md')"
+                            class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-600">User
+                            Manual</button>
+                        <button onclick="loadReadme('INSTALLATION_MANUAL.md')"
+                            class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-600">Install
+                            Guide</button>
+                        <button onclick="loadReadme('SCALING_REDIS_MEMURAI.md')"
+                            class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-600">Scaling</button>
+                        <button onclick="loadReadme('SECURITY.md')"
+                            class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-600">Security</button>
+                    </div>
+                    <button type="button" onclick="document.getElementById('docs-modal').classList.add('hidden')"
+                        class="text-gray-400 hover:text-gray-500 text-2xl font-bold">
+                        &times;
+                    </button>
+                </div>
+                <div
+                    class="mt-2 flex-grow overflow-y-auto p-6 bg-gray-50 dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
+                    <!-- GitHub Markdown CSS for guaranteed styling -->
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.0/github-markdown.min.css">
+                    <style>
+                        .markdown-body {
+                            box-sizing: border-box;
+                            min-width: 200px;
+                            max-width: 980px;
+                            margin: 0 auto;
+                            padding: 15px;
+                            background-color: transparent;
+                        }
+                    </style>
+                    <div id="markdown-container" class="markdown-body text-gray-800 dark:text-gray-200">
+                        Loading documentation...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -31,7 +31,7 @@ def clean_directory(path):
             print(f"  Warning: Could not completely delete '{path}'. PyInstaller might fail.")
 
 def main():
-    print("=== Universal API Bridge Build System ===")
+    print("=== Synora Connect Build System ===")
     print("What would you like to build?")
     print("  1. OneDir (Faster to launch, produces a folder with many files)")
     print("  2. OneFile (Slower to launch, produces a single clean .exe)")

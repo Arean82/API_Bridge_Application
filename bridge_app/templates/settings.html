@@ -1,0 +1,320 @@
+{% extends 'layout.html' %}
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto mt-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-white">System Configuration</h1>
+    </div>
+
+    <!-- Restart Warning Banner -->
+    <div id="restart-warning"
+        class="hidden mb-6 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded shadow-sm"
+        role="alert">
+        <div class="flex items-center">
+            <svg class="h-6 w-6 mr-2 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <p><strong>Note:</strong> You have modified a Core setting (Server or Database). Saving will automatically
+                reboot the server.</p>
+        </div>
+    </div>
+
+    <!-- Documentation Modal (Readme) -->
+    <div
+        class="theme-panel overflow-hidden mb-6">
+        <div
+            class="px-6 py-4 border-b border-gray-200 dark:border-gray-600 bg-black/5 dark:bg-white/5 flex justify-between items-center">
+            <div>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Documentation</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">View application manuals.</p>
+            </div>
+            <button type="button" id="view-readme-btn" onclick="document.getElementById('docs-modal').classList.remove('hidden')"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition">
+                View README
+            </button>
+        </div>
+    </div>
+
+    <!-- HTML Modal for Docs (Client Side Markdown Rendering) -->
+    {% include 'partials/docs_modal.html' %}
+
+    <!-- Local JS for Markdown -->
+    <script src="{{ url_for('static', filename='vendor/marked.min.js') }}"></script>
+    
+    <script>
+        function loadReadme(filename) {
+            const container = document.getElementById('markdown-container');
+            container.innerHTML = "Loading...";
+            fetch('/htmx/docs/' + filename)
+                .then(response => response.text())
+                .then(text => {
+                    container.innerHTML = marked.parse(text);
+                })
+                .catch(err => {
+                    container.innerHTML = "Error loading readme: " + err;
+                });
+        }
+        
+        // Auto-load main readme when opening
+        document.getElementById('view-readme-btn').addEventListener('click', () => {
+            loadReadme('README.md');
+        });
+    </script>
+
+        <form id="settings-form" action="/settings/save" method="POST" class="space-y-6">
+
+            <!-- Server Section (Core) -->
+            <div
+                class="theme-panel overflow-hidden mb-6">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-600 bg-black/5 dark:bg-white/5">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Server Settings</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Core application hosting configurations.</p>
+                </div>
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Host IP</label>
+                        <input type="text" name="Server.host" value="{{ config.get('Server', 'host') }}"
+                            class="core-setting mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
+                    </div>
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Port</label>
+                        <input type="number" name="Server.port" value="{{ config.get('Server', 'port') }}"
+                            class="core-setting mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
+                    </div>
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Environment</label>
+                        <select name="Server.environment"
+                            class="core-setting mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
+                            <option value="development" {% if config.get('Server', 'environment' )=='development'
+                                %}selected{% endif %}>Development (SQLite)</option>
+                            <option value="production" {% if config.get('Server', 'environment' )=='production'
+                                %}selected{% endif %}>Production (Postgres)</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center mt-6">
+                        <input type="checkbox" name="Server.debug" value="True" {% if
+                            config.getboolean('Server', 'debug' ) %}checked{% endif %}
+                            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label class="ml-2 block text-sm text-gray-900 dark:text-gray-300">Enable Debug Mode</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Database Settings (Core) -->
+            <div
+                class="theme-panel overflow-hidden mb-6">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-600 bg-black/5 dark:bg-white/5">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">PostgreSQL Configuration</h3>
+                </div>
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Host</label>
+                        <input type="text" name="POSTGRES.host" value="{{ config.get('POSTGRES', 'host') }}"
+                            class="core-setting mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
+                    </div>
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Port</label>
+                        <input type="number" name="POSTGRES.port" value="{{ config.get('POSTGRES', 'port') }}"
+                            class="core-setting mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
+                    </div>
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Database Name</label>
+                        <input type="text" name="POSTGRES.database" value="{{ config.get('POSTGRES', 'database') }}"
+                            class="core-setting mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
+                    </div>
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
+                        <input type="text" name="POSTGRES.username" value="{{ config.get('POSTGRES', 'username') }}"
+                            class="core-setting mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
+                    </div>
+                    <div class="md:col-span-2 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+                        <div class="relative mt-1">
+                            <input type="password" id="pg-password" name="POSTGRES.password" value="{{ config.get('POSTGRES', 'password') }}"
+                                class="core-setting block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm pr-10">
+                            <button type="button" onclick="togglePassword()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                <svg id="eye-icon" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                            </button>
+                        </div>
+                        <script>
+                            function togglePassword() {
+                                const passInput = document.getElementById('pg-password');
+                                if (passInput.type === 'password') {
+                                    passInput.type = 'text';
+                                } else {
+                                    passInput.type = 'password';
+                                }
+                            }
+                        </script>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UI & Background Tasks (Instant) -->
+            <!-- UI, Scaling & Background Tasks -->
+            <div class="theme-panel overflow-hidden mb-6">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-600 bg-black/5 dark:bg-white/5">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Preferences & Scaling</h3>
+                </div>
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">UI Theme</label>
+                        <select name="UI.theme"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
+                            <option value="default" {% if config.get('UI', 'theme' )=='default' %}selected{% endif %}>Default</option>
+                            <option value="glass" {% if config.get('UI', 'theme' )=='glass' %}selected{% endif %}>Glassmorphism</option>
+                            <option value="clay" {% if config.get('UI', 'theme' )=='clay' %}selected{% endif %}>Claymorphism</option>
+                            <option value="neobrut" {% if config.get('UI', 'theme' )=='neobrut' %}selected{% endif %}>Neo-Brutalism</option>
+                            <option value="solid" {% if config.get('UI', 'theme' )=='solid' %}selected{% endif %}>Solid Flat</option>
+                        </select>
+                    </div>
+
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Color Mode</label>
+                        <select name="UI.colormode" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
+                            <option value="auto" {% if config.get('UI', 'colormode')=='auto' %}selected{% endif %}>Auto</option>
+                            <option value="light" {% if config.get('UI', 'colormode')=='light' %}selected{% endif %}>Light</option>
+                            <option value="dark" {% if config.get('UI', 'colormode')=='dark' %}selected{% endif %}>Dark</option>
+                        </select>
+                    </div>                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Timezone</label>
+                        <input type="text" name="Server.timezone" value="{{ config.get('Server', 'timezone') }}"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
+                    </div>
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Date Format</label>
+                        <input type="text" name="UI.date_format" value="{{ config.get('UI', 'date_format') }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
+                    </div>
+                    <div class="md:col-span-2 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Redis URL (Leave blank for Memory Storage)</label>
+                        <input type="text" name="Server.redis_url" value="{{ config.get('Server', 'redis_url') }}" placeholder="redis://localhost:6379/0"
+                            class="core-setting mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
+                    </div>
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Failed Job Retention (Mins)</label>
+                        <input type="number" name="RetryQueue.retention_minutes" value="{{ config.get('RetryQueue', 'retention_minutes') }}"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
+                    </div>
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Swagger Refresh Interval</label>
+                        <div class="flex mt-1">
+                            <input type="number" name="Swagger.refresh_interval" value="{{ config.get('Swagger', 'refresh_interval') }}" class="w-1/2 rounded-l-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
+                            <select name="Swagger.refresh_unit" class="w-1/2 rounded-r-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm border-l-0">
+                                <option value="minutes" {% if config.get('Swagger', 'refresh_unit')=='minutes' %}selected{% endif %}>Minutes</option>
+                                <option value="hours" {% if config.get('Swagger', 'refresh_unit')=='hours' %}selected{% endif %}>Hours</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tracing & Logging -->
+            <div class="theme-panel overflow-hidden mb-6">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-600 bg-black/5 dark:bg-white/5">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Observability & Logging</h3>
+                </div>
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">OpenTelemetry Enabled</label>
+                        <select name="OPENTELEMETRY.enabled" class="core-setting mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
+                            <option value="false" {% if config.get('OPENTELEMETRY', 'enabled')=='false' %}selected{% endif %}>False</option>
+                            <option value="true" {% if config.get('OPENTELEMETRY', 'enabled')=='true' %}selected{% endif %}>True</option>
+                        </select>
+                    </div>
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">OTLP Endpoint</label>
+                        <input type="text" name="OPENTELEMETRY.otlp_endpoint" value="{{ config.get('OPENTELEMETRY', 'otlp_endpoint') }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
+                    </div>
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Log Directory</label>
+                        <input type="text" name="Logging.log_dir" value="{{ config.get('Logging', 'log_dir') }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
+                    </div>
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Log Rotation</label>
+                        <select name="Logging.rotation" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
+                            <option value="daily" {% if config.get('Logging', 'rotation')=='daily' %}selected{% endif %}>Daily</option>
+                            <option value="weekly" {% if config.get('Logging', 'rotation')=='weekly' %}selected{% endif %}>Weekly</option>
+                        </select>
+                    </div>
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Max Backups</label>
+                        <input type="number" name="Logging.backup_count" value="{{ config.get('Logging', 'backup_count') }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end pb-12">
+                <button type="submit" id="save-btn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow-lg transition duration-200">
+                    Save Settings
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Logic to detect Core setting changes and update the save button
+        const coreSettings = document.querySelectorAll('.core-setting');
+        const saveBtn = document.getElementById('save-btn');
+        const warningBanner = document.getElementById('restart-warning');
+        const envSelect = document.querySelector('select[name="Server.environment"]');
+        const pgInputs = document.querySelectorAll('input[name^="POSTGRES."]');
+
+        // Store original values
+        coreSettings.forEach(el => {
+            el.dataset.original = el.value;
+        });
+
+        function checkCoreChanges() {
+            let changed = false;
+            coreSettings.forEach(el => {
+                if (el.value !== el.dataset.original) {
+                    changed = true;
+                }
+            });
+
+            if (changed) {
+                saveBtn.innerText = "Save & Auto-Reboot";
+                saveBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                saveBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                warningBanner.classList.remove('hidden');
+            } else {
+                saveBtn.innerText = "Save Settings";
+                saveBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                saveBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                warningBanner.classList.add('hidden');
+            }
+        }
+
+        function togglePostgresFields() {
+            if (envSelect && pgInputs.length > 0) {
+                const isDev = envSelect.value === 'development';
+                pgInputs.forEach(input => {
+                    input.disabled = isDev;
+                    if (isDev) {
+                        input.classList.add('opacity-50', 'cursor-not-allowed');
+                    } else {
+                        input.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
+                });
+            }
+        }
+
+        if (envSelect) {
+            envSelect.addEventListener('change', togglePostgresFields);
+            // Run on initial load
+            togglePostgresFields();
+        }
+
+        coreSettings.forEach(el => {
+            el.addEventListener('input', checkCoreChanges);
+            el.addEventListener('change', checkCoreChanges);
+        });
+    </script>
+    {% endblock %}

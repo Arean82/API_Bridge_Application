@@ -1,4 +1,4 @@
-# API Bridge Application – Simple Installation Manual
+# Synora Connect – Simple Installation Manual
 
 ## 1️⃣ Install from Source
 
@@ -24,7 +24,7 @@
 
    This installs Flask, Flask‑Cors, OpenTelemetry, SQLAlchemy and all other libraries the app needs.
 
-You now have a working development copy of the API Bridge ready for the next step.
+You now have a working development copy of the Synora Connect ready for the next step.
 
 ---
 
@@ -40,7 +40,7 @@ The repository ships a helper script `build.py` that wraps PyInstaller.
 
    You will see a menu:
    ```
-   === Universal API Bridge Build System ===
+   === Synora Connect Build System ===
    What would you like to build?
      1. OneDir  (folder with many files – fastest build)
      2. OneFile (single .exe – clean distribution)
@@ -70,7 +70,7 @@ The repository ships a helper script `build.py` that wraps PyInstaller.
      ```
    - You should see the message:
      ```
-     === API Bridge started ===
+     === Synora Connect started ===
      Running on http://0.0.0.0:5000/ (Press CTRL+C to quit)
      ```
    - Open a browser at `http://localhost:5000/` to confirm the API endpoint returns JSON.
@@ -116,12 +116,12 @@ Create `/etc/systemd/system/api-bridge.service`:
 
 ```ini
 [Unit]
-Description=API Bridge Application
+Description=Synora Connect
 After=network.target
 
 [Service]
 WorkingDirectory=/path/to/API_Bridge_Application
-ExecStart=/path/to/API_Bridge_Application/venv/bin/python run.py
+ExecStart=/path/to/API_Bridge_Application/venv/bin/python synora_connect.py
 Restart=always
 User=www-data
 Group=www-data
@@ -139,7 +139,7 @@ sudo systemctl enable api-bridge.service
 sudo systemctl start api-bridge.service
 ```
 ### 3a. Advanced: Multi-Node Clustering (Optional)
-If you want to run multiple API Bridge instances across several servers for load balancing, you will need to configure a distributed task broker. See the **[Distributed Execution & Scaling Guide](SCALING_REDIS_MEMURAI.md)** for instructions on setting up Redis (Linux) or Memurai (Windows).
+If you want to run multiple Synora Connect instances across several servers for load balancing, you will need to configure a distributed task broker. See the **[Distributed Execution & Scaling Guide](SCALING_REDIS_MEMURAI.md)** for instructions on setting up Redis (Linux) or Memurai (Windows).
 
 ### 4. Set up Nginx as a reverse proxy
 
@@ -219,7 +219,7 @@ Create `/etc/systemd/system/api-bridge-binary.service`:
 
 ```ini
 [Unit]
-Description=API Bridge (PyInstaller binary)
+Description=Synora Connect (PyInstaller binary)
 After=network.target
 
 [Service]

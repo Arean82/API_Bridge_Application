@@ -3,12 +3,14 @@
 block_cipher = None
 
 a = Analysis(
-    ['run.py'],
+    ['synora_connect.py'],
     pathex=[],
     binaries=[],
     datas=[
         ('bridge_app/templates', 'bridge_app/templates'),
-        ('bridge_app/static', 'bridge_app/static')
+        ('bridge_app/static', 'bridge_app/static'),
+        ('docs', 'docs'),
+        ('LICENSE', '.')
     ],
     hiddenimports=[],
     hookspath=[],
@@ -37,6 +39,7 @@ exe = EXE(
     upx_exclude=[],
     runtime_tmpdir=None,
     console=True,
+    icon='bridge_app/static/icon.ico',
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
