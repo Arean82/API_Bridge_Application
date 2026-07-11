@@ -138,8 +138,9 @@ sudo systemctl daemon-reload
 sudo systemctl enable api-bridge.service
 sudo systemctl start api-bridge.service
 ```
-### E. Advanced: Multi-Node Clustering (Optional)
+### 3a. Advanced: Multi-Node Clustering (Optional)
 If you want to run multiple API Bridge instances across several servers for load balancing, you will need to configure a distributed task broker. See the **[Distributed Execution & Scaling Guide](SCALING_REDIS_MEMURAI.md)** for instructions on setting up Redis (Linux) or Memurai (Windows).
+
 ### 4. Set up Nginx as a reverse proxy
 
 Create `/etc/nginx/sites-available/api_bridge`:

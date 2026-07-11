@@ -20,11 +20,19 @@ You can now pull data from multiple different APIs simultaneously!
 
 ### The Right Side (Formatting Data)
 Now we have to translate your data into the exact format the client requested.
-1. **Destination URL**: Paste the API link where the client wants to receive the data.
-2. **Auth Type**: If the client requires a token, select Bearer Token and enter it.
-3. **Field Mapping**: Click **"+ Add Field"**. Select the Source field from the dropdown (you will notice multi-source fields are prefixed like `source_0.gps_data` and `source_1.fuel_data` so you know exactly which endpoint they came from). Then, type exactly what the Client wants that field to be named in the Target field box.
-4. **Schedule**: At the bottom of the screen, type in an **Interval** (in seconds). If you type `20`, the bridge will push data to the client every 20 seconds.
-5. Click **"Save Config & Schedule"**.
+
+**First, choose your Execution Mode:**
+- **Push** — The bridge pushes data to the client on a schedule.
+- **Pull REST** — The bridge generates a live REST API endpoint (with Swagger UI) that the client can call whenever they want.
+- **Pull GraphQL** — The bridge generates a GraphQL Playground IDE with a dynamic schema.
+
+**Then, configure your destinations:**
+1. **Push mode**: Enter the Destination URL, select the HTTP method (POST/PUT/PATCH), and configure auth if needed.
+2. **Pull REST/GraphQL mode**: Enter a Destination Name (e.g., "Client Endpoint 1"). This name is used to generate the URL slug for the auto-generated endpoint.
+3. **Multiple Destinations**: Click **"+ Add Destination"** to route the same source data to multiple clients simultaneously.
+4. **Field Mapping**: For each destination, click **"+ Add Field"**. Select the Source field from the dropdown (multi-source fields are prefixed like `source_0.gps_data` and `source_1.fuel_data` so you know exactly which endpoint they came from). Then, type exactly what the Client wants that field to be named in the Target field box.
+5. **Schedule**: At the bottom, type in an **Interval** (in seconds). If you type `20`, the bridge will push data every 20 seconds.
+6. Click **"Save Config & Schedule"**.
 
 ---
 
@@ -38,9 +46,13 @@ Here you can:
 - Click **Start** or **Stop** to pause an active feed without deleting it.
 
 ### The Templates Manager
-If you click **Templates** in the top navigation bar, you can manage the reusable configurations you've built.
+If you click **Templates** in the top navigation bar, you can manage the reusable configurations you've built. Templates are grouped by execution mode (Push, Pull REST, Pull GraphQL).
 - **Edit**: Clicking Edit opens a popup where you can rename your template, change the API keys, or adjust your Field Mappings instantly.
+- **Edit as New**: Opens the full Create page pre-filled with data from an existing template. This lets you create a variation without modifying the original.
 - **Clone**: This is a massive time-saver. If you have a completely mapped out GPS feed and you want to send it to a *new* client, click **Clone**. A popup will appear perfectly pre-filled with your Source config and Mappings. All you have to do is type in the new Destination URL and hit Save!
+- **Swagger UI** (Pull REST only): Click this button to open a fully interactive Swagger documentation page for your template's REST endpoints.
+- **GraphQL IDE** (Pull GraphQL only): Click this button to open the GraphQL Playground where you can write and test queries against your dynamic schema.
+- **Delete**: Removes the template and all associated scheduled jobs.
 
 ---
 
