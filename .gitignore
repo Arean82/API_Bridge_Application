@@ -23,3 +23,5 @@ dist/
 # Project Specific
 scratch/
 sample/
+instance/
+logs/
