@@ -26,7 +26,11 @@ class PullGraphqlHandler {
         this.destinations = (destinationsList || []).map(d => ({
             ...d,
             name: d.name || 'Client',
-            field_mapping: d.field_mapping || []
+            field_mapping: (d.field_mapping || []).map(f => ({
+                source_field: f.source || f.source_field || '',
+                client_name: f.target || f.client_name || '',
+                value_mapping: f.value_mapping || []
+            }))
         }));
         this.render();
     }

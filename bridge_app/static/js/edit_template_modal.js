@@ -94,16 +94,20 @@ class TemplateModalController {
     }
 
     renderMode() {
-        if (!this.pushConfigBlockModal) return;
+        if (!this.isInitialized) return;
+        this.executionMode = this.executionModeSelect.value;
+        
         this.pushConfigBlockModal.style.display = 'none';
         this.pullRestConfigBlockModal.style.display = 'none';
         this.pullGraphqlConfigBlockModal.style.display = 'none';
+        if(this.scheduleIntervalWrapper) this.scheduleIntervalWrapper.style.display = 'none';
+        if(this.globalTokenWrapperModal) this.globalTokenWrapperModal.style.display = 'none';
         
         if (this.executionMode === 'push') {
             this.pushConfigBlockModal.style.display = 'block';
-            if (this.globalTokenWrapperModal) this.globalTokenWrapperModal.style.display = 'none';
+            if(this.scheduleIntervalWrapper) this.scheduleIntervalWrapper.style.display = 'block';
         } else {
-            if (this.globalTokenWrapperModal) this.globalTokenWrapperModal.style.display = 'block';
+            if(this.globalTokenWrapperModal) this.globalTokenWrapperModal.style.display = 'block';
             if (this.executionMode === 'pull_rest') {
                 this.pullRestConfigBlockModal.style.display = 'block';
                 this.pullRestHandler.setEndpointUrl(this.templateName);
@@ -163,8 +167,15 @@ class TemplateModalController {
             await this.fetchApiDocs(i, false);
             this.sources[i].selectedApi = savedApi; 
         }
+        
+        this.updateDestinationFields();
 
-        this.executionMode = t.execution_mode || 'push';
+
+        if (t.execution_mode === 'pull') {
+            this.executionMode = t.pull_method === 'GRAPHQL' ? 'pull_graphql' : 'pull_rest';
+        } else {
+            this.executionMode = t.execution_mode || 'push';
+        }
         
         let dests = [];
         if (t.destinations && t.destinations.length > 0) {
@@ -238,9 +249,7 @@ class TemplateModalController {
         this.addEndpointBtn.style.display = this.editSource ? 'inline-block' : 'none';
         
         if(this.executionModeSelect) this.executionModeSelect.value = this.executionMode;
-        if(this.pullMethodSelect) this.pullMethodSelect.value = this.pullMethod;
         
-        this.renderMode();
         this.renderMode();
     }
 
