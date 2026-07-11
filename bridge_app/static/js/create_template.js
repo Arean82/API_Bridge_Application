@@ -340,6 +340,7 @@ class CreateTemplateController {
                 if (base && base.endsWith('/')) base = base.slice(0, -1);
                 if (e.target.value) this.sources[idx].url = base + e.target.value;
                 this.renderSources();
+                this.renderFields();
             });
             div.querySelector('.src-url-in').addEventListener('input', (e) => this.sources[idx].url = e.target.value);
             div.querySelector('.src-auth-in').addEventListener('input', (e) => this.sources[idx].auth_token = e.target.value);

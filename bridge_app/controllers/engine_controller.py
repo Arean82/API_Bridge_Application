@@ -99,10 +99,33 @@ def get_api_docs():
                 continue
                 
             fields = []
-            # Extract fields from the response schema (simplified parsing for swagger 3.0)
             try:
-                schema = method['responses']['200']['content']['application/json']['schema']
+                responses = method.get('responses', {})
+                success_resp = None
+                for code in ['200', '201', '202', 'default', 200, 201, 202]:
+                    if code in responses or str(code) in responses:
+                        success_resp = responses.get(code) or responses.get(str(code))
+                        break
+                        
+                if not success_resp:
+                    continue
+                    
+                schema = None
                 
+                # OpenAPI 3.x (3.0, 3.1, 3.2+)
+                if 'content' in success_resp:
+                    for media_type, media_obj in success_resp['content'].items():
+                        if 'schema' in media_obj:
+                            schema = media_obj['schema']
+                            if 'application/json' in media_type:
+                                break # Prefer JSON if available
+                # OpenAPI 2.0 (Swagger)
+                elif 'schema' in success_resp:
+                    schema = success_resp['schema']
+                    
+                if not schema:
+                    continue
+                    
                 # Resolve ref
                 def resolve_ref(ref_str, full_docs):
                     parts = ref_str.split('/')
@@ -125,7 +148,7 @@ def get_api_docs():
                         props = schema.get('properties', {})
                     
                 fields = list(props.keys())
-            except Exception:
+            except Exception as e:
                 pass
                 
             endpoints.append({

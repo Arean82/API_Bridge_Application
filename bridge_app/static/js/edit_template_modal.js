@@ -291,6 +291,7 @@ class TemplateModalController {
                 this.sources[idx].selectedApi = e.target.value;
                 if (e.target.value) this.sources[idx].url = e.target.value;
                 this.renderSources();
+                this.renderFields();
             });
             div.querySelector('.src-url-in').addEventListener('input', (e) => this.sources[idx].url = e.target.value);
             div.querySelector('.src-auth-in').addEventListener('input', (e) => this.sources[idx].auth_token = e.target.value);

@@ -30,13 +30,38 @@ def generate_graphql_schema_from_mapping(field_mapping):
             # The data will be passed in through context
             data = info.context.get('payload_data', {})
             
+            def get_nested_value(current_data, path):
+                import re
+                parts = path.split('.')
+                current = current_data
+                for part in parts:
+                    array_match = re.match(r'(.+)\[(\d*)\]', part)
+                    if array_match:
+                        key = array_match.group(1)
+                        idx_str = array_match.group(2)
+                        idx = int(idx_str) if idx_str else 0
+                        if isinstance(current, dict) and key in current:
+                            current = current[key]
+                            if isinstance(current, list) and len(current) > idx:
+                                current = current[idx]
+                            else:
+                                return None
+                        else:
+                            return None
+                    else:
+                        if isinstance(current, dict) and part in current:
+                            current = current[part]
+                        else:
+                            return None
+                return current
+
             # Map the clean names back to the data we have
             resolver_data = {}
             for mapping in field_mapping:
                 target = mapping.get("target")
                 if target:
                     safe_name = re.sub(r'[^a-zA-Z0-9_]', '_', target)
-                    resolver_data[safe_name] = data.get(target, None)
+                    resolver_data[safe_name] = get_nested_value(data, target)
                     
             return DynamicType(**resolver_data)
             
