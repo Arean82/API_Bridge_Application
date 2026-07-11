@@ -101,6 +101,9 @@ pip install -r requirements.txt
 
 ### 2. Configure for production
 
+> [!IMPORTANT]
+> **Configuration Required**: You MUST edit `config.ini` before running in production. The application requires proper database and host settings to function correctly.
+
 Edit `config.ini`:
 
 - Set `debug = False`
@@ -135,7 +138,8 @@ sudo systemctl daemon-reload
 sudo systemctl enable api-bridge.service
 sudo systemctl start api-bridge.service
 ```
-
+### E. Advanced: Multi-Node Clustering (Optional)
+If you want to run multiple API Bridge instances across several servers for load balancing, you will need to configure a distributed task broker. See the **[Distributed Execution & Scaling Guide](SCALING_REDIS_MEMURAI.md)** for instructions on setting up Redis (Linux) or Memurai (Windows).
 ### 4. Set up Nginx as a reverse proxy
 
 Create `/etc/nginx/sites-available/api_bridge`:
@@ -190,7 +194,10 @@ scp dist/onedir/bridge_app user@server:/opt/api-bridge/
 
 ### 2. Ensure the config file is present
 
-Place a `config.ini` file in the same directory as the binary and edit it for production:
+> [!IMPORTANT]
+> **Configuration Required**: You MUST place a `config.ini` file in the same directory as the binary and edit it before running. The application requires proper database and host settings to function correctly.
+
+Edit it for production:
 
 - `debug = False`
 - `environment = production`

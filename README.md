@@ -8,14 +8,14 @@ The app features a fully dynamic **Multi-Page Architecture** that allows you to 
 
 This application adheres to a clean, scalable **Model-View-Controller + Service (MVC-S)** architecture:
 - **Models (`/models`)**: Defines the data schema (Templates, Configurations, Jobs) and database interactions using SQLite.
-- **Views (`/templates` & `/static`)**: Completely modularized presentation layer. Server-side HTML logic is isolated in `templates/`, while client-side styles and Alpine.js reactivity logic are cleanly separated into `static/css/` and `static/js/` for optimal caching and browser performance.
+- **Views (`/templates` & `/static`)**: Completely modularized presentation layer. Server-side HTML logic is isolated in `templates/`, while client-side styles and reactivity logic are cleanly separated into `static/css/` and `static/js/` utilizing Vanilla JS and HTMX for optimal caching and browser performance.
 - **Controllers (`/controllers`)**: Minimalist API route handlers that act as traffic cops between the Views and Services.
 - **Services (`/services`)**: Heavy lifting and business logic (like background task scheduling, external API fetching, AES-256-GCM encryption, and dynamic payload parsing) are decoupled from the controllers here.
 
 ## Advanced Features
 - **AES-256-GCM Token Encryption**: All API auth tokens are safely encrypted in the database at rest using a 256-bit Master Key generated in your `.env` file.
 - **OpenTelemetry Observability (OTLP)**: Natively instruments application traces and exports them via OTLP (compatible with Jaeger, Zabbix, or Datadog) using `config.ini`.
-- **CORS-Enabled Mock Server**: Automatically generates functional `/api/mock/<id>/<path>` REST endpoints from Swagger configurations to serve static JSON examples to external frontends.
+- **CORS-Enabled Mock Server**: Automatically generates functional `/api/mock/<id>/<path>` REST endpoints from OpenAPI 3.0.3 / Swagger configurations to serve static JSON examples to external frontends.
 - **Dynamic Environments**: Configure multiple environment URLs (Dev/Staging/Prod) per connection and seamlessly switch between them in the UI.
 
 ## Quick Start
@@ -23,7 +23,11 @@ This application adheres to a clean, scalable **Model-View-Controller + Service 
 ### 1. Prerequisites
 - Python 3.12+
 
-### 2. Installation & Setup
+### 2. Configuration (Required)
+> [!IMPORTANT]
+> Before running the application in a production environment, you must update `config.ini` with your database credentials (PostgreSQL or SQLite), environment mode, and host/port settings.
+
+### 3. Installation & Setup
 Run the following commands in the root directory:
 
 **Windows (PowerShell)**
@@ -40,7 +44,7 @@ source venv/bin/activate
 pip install -r bridge_app/requirements.txt
 ```
 
-### 3. Running the Server
+### 4. Running the Server
 ```bash
 python run.py
 ```
@@ -73,6 +77,12 @@ This is the 2-pane configuration builder where you construct mappings from scrat
 - Provide a Template Name.
 - Configure the schedule interval in seconds at the bottom.
 - Click "Save Config & Schedule" to immediately start the background feed.
+
+> [!TIP]
+> **Extreme Scaling & Multi-Node Clusters**
+> If you are deploying to a production cluster or need to process thousands of endpoints simultaneously across multiple servers, the API Bridge supports distributed execution via Redis (Linux) and Memurai (Windows).
+> 
+> See the [Distributed Execution & Scaling Guide](SCALING_REDIS_MEMURAI.md) for setup instructions.
 
 ### 3. Templates Manager (`/templates`)
 This page manages your saved configurations (templates).

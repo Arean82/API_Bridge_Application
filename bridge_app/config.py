@@ -96,3 +96,34 @@ class Config:
     # Swagger Configuration
     SWAGGER_REFRESH_INTERVAL = config_ini.getint('Swagger', 'refresh_interval', fallback=1)
     SWAGGER_REFRESH_UNIT = config_ini.get('Swagger', 'refresh_unit', fallback='hours')
+    
+    # Scheduler Execution & Scale-Out Configuration
+    from apscheduler.executors.pool import ThreadPoolExecutor
+    from apscheduler.jobstores.memory import MemoryJobStore
+    
+    SCHEDULER_EXECUTORS = {
+        'default': ThreadPoolExecutor(max_workers=200)
+    }
+    
+    # Optional Redis configuration for multi-node locking
+    REDIS_URL = config_ini.get('Server', 'redis_url', fallback='')
+    
+    if REDIS_URL.strip():
+        from apscheduler.jobstores.redis import RedisJobStore
+        import urllib.parse
+        parsed = urllib.parse.urlparse(REDIS_URL.strip())
+        connect_args = {
+            'host': parsed.hostname or 'localhost',
+            'port': parsed.port or 6379,
+            'db': int(parsed.path.lstrip('/') or '0')
+        }
+        if parsed.password:
+            connect_args['password'] = parsed.password
+            
+        SCHEDULER_JOBSTORES = {
+            'default': RedisJobStore(jobs_key='bridge_jobs', run_times_key='bridge_run_times', **connect_args)
+        }
+    else:
+        SCHEDULER_JOBSTORES = {
+            'default': MemoryJobStore()
+        }

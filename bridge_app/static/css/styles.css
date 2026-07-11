@@ -14,6 +14,7 @@
             --text-muted: #6b7280;
             --text-nav: #ffffff;
             --backdrop: none;
+            --overlay-bg: rgba(0, 0, 0, 0.5);
         }
 
         [data-color-mode="dark"], [data-theme="default"][data-color-mode="dark"] {
@@ -26,6 +27,7 @@
             --text-main: #f9fafb;
             --text-muted: #9ca3af;
             --text-nav: #f9fafb;
+            --overlay-bg: rgba(0, 0, 0, 0.7);
         }
 
         [data-theme="glass"] {
@@ -43,6 +45,7 @@
             --text-muted: #2563eb;
             --text-nav: #1e3a8a;
             --backdrop: blur(12px);
+            --overlay-bg: rgba(107, 114, 128, 0.1);
         }
 
         [data-theme="glass"][data-color-mode="dark"] {
@@ -55,6 +58,7 @@
             --text-main: #e0e7ff;
             --text-muted: #818cf8;
             --text-nav: #e0e7ff;
+            --overlay-bg: rgba(255, 255, 255, 0.05);
         }
 
         [data-theme="clay"] {
@@ -72,6 +76,7 @@
             --text-muted: #718096;
             --text-nav: #4a5568;
             --backdrop: none;
+            --overlay-bg: rgba(0, 0, 0, 0.4);
         }
 
         [data-theme="clay"][data-color-mode="dark"] {
@@ -85,6 +90,7 @@
             --text-main: #e2e8f0;
             --text-muted: #a0aec0;
             --text-nav: #e2e8f0;
+            --overlay-bg: rgba(0, 0, 0, 0.7);
         }
 
         [data-theme="neobrut"] {
@@ -102,6 +108,7 @@
             --text-muted: #000000;
             --text-nav: #000000;
             --backdrop: none;
+            --overlay-bg: rgba(0, 0, 0, 0.6);
         }
 
         [data-theme="neobrut"][data-color-mode="dark"] {
@@ -116,6 +123,7 @@
             --text-main: #f8f9fa;
             --text-muted: #ced4da;
             --text-nav: #f8f9fa;
+            --overlay-bg: rgba(0, 0, 0, 0.8);
         }
 
         body {

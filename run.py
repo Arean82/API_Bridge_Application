@@ -1,6 +1,6 @@
 # ==================================================================
 # File: run.py
-# Description: Main entry point from the root directory.
+# Description: Main entry point to start the Flask application.
 # ==================================================================
 
 import os

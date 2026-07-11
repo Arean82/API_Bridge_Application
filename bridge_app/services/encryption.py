@@ -1,3 +1,8 @@
+# ==================================================================
+# File: bridge_app/services/encryption.py
+# Description: Service for securely encrypting and decrypting sensitive DB fields.
+# ==================================================================
+
 import os
 import base64
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM

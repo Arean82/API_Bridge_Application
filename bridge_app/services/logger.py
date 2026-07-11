@@ -1,6 +1,6 @@
 # ==================================================================
 # File: bridge_app/engine/logger.py
-# Description: Utility for logging pull/push events and payload data.
+# Description: Centralized application logging configuration.
 # ==================================================================
 
 import json
@@ -15,6 +15,15 @@ def log_job(job_id, status, payload, http_status=None, error_message=None):
     """
     # Needs application context because it's run from the scheduler
     try:
+        from bridge_app.models import JobModel
+        from zoneinfo import ZoneInfo
+        from flask import current_app
+        
+        job = JobModel.query.get(job_id)
+        if job:
+            tz_str = current_app.config.get('APP_TIMEZONE', 'UTC')
+            job.last_run = datetime.now(ZoneInfo(tz_str)).replace(tzinfo=None)
+
         log = JobLog(
             job_id=job_id,
             status=status,
