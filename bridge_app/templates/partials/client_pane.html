@@ -8,57 +8,42 @@
     
     <div class="p-6 flex-1 overflow-y-auto space-y-6">
         <!-- Client Config -->
-        <div class="grid grid-cols-2 gap-4">
         <div class="col-span-2 grid grid-cols-2 gap-4 mb-4">
-            <div>
-                <label class="block text-sm font-medium mb-1">Mode of Operation</label>
-                <select id="executionMode" class="theme-input w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    <option value="push">Scheduled Push</option>
-                    <option value="pull_rest">On-Demand Pull (REST)</option>
-                    <option value="pull_graphql">On-Demand Pull (GraphQL)</option>
-                </select>
-            </div>
-            <div id="clientUrlWrapper">
-                <label class="block text-sm font-medium mb-1">Destination URL</label>
-                <input type="text" id="clientUrl" class="theme-input w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="https://api.client.com/ingest">
-            </div>
-            <div id="pullEndpointWrapper" style="display: none;">
-                <label class="block text-sm font-medium mb-1">Bridge Endpoint URL (Auto-Generated)</label>
-                <input type="text" id="pullEndpointUrl" class="theme-input w-full p-2.5 text-sm bg-gray-100 text-gray-500" readonly placeholder="Will be generated after saving">
-            </div>
-        </div>
-            <div>
-                <label class="block text-sm font-medium mb-1">Auth Type</label>
-                <select id="clientAuthType" class="theme-input w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    <option value="none">None</option>
-                    <option value="bearer">Bearer Token</option>
-                </select>
-            </div>
-            <div id="clientAuthTokenWrapper" style="display: none;">
-                <label class="block text-sm font-medium mb-1">Auth Token</label>
-                <input type="password" id="clientAuthToken" class="theme-input w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </div>
-        </div>
-
-        <!-- Field Mapping Builder -->
-        <div class="mt-8">
-            <div class="flex justify-between items-center mb-4">
-                <h4 class="text-lg font-semibold">Field Mapping</h4>
-                <button id="addFieldRowBtn" class="theme-btn px-3 py-1.5 text-sm flex items-center gap-1">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    Add Field
-                </button>
-            </div>
-            
-            <div class="border border-black/10 rounded p-2 bg-black/5">
-                <div id="mappingList" class="space-y-2 min-h-[100px]">
-                    <!-- Rendered by JS -->
-                    <div id="noMappedFieldsMsg" class="text-center py-8 text-sm theme-text-muted">
-                        Click "+ Add Field" to start mapping.
+            <div class="col-span-2 flex justify-between items-end border-b border-black/10 pb-2 mb-2 gap-4">
+                <div class="w-1/2">
+                    <label class="block text-sm font-medium mb-1">Mode of Operation</label>
+                    <select id="executionMode" class="theme-input w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="push">Scheduled Push</option>
+                        <option value="pull_rest">On-Demand Pull (REST)</option>
+                        <option value="pull_graphql">On-Demand Pull (GraphQL)</option>
+                    </select>
+                </div>
+                <div class="w-1/2" id="globalTokenWrapper" style="display: none;">
+                    <label class="block text-sm font-medium mb-1">Global Security Token (Bearer)</label>
+                    <div class="relative">
+                        <input type="password" id="globalSecurityToken" class="theme-input w-full p-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Leave empty for no auth">
+                        <button type="button" id="toggleGlobalTokenBtn" class="absolute inset-y-0 right-0 pr-3 flex items-center theme-text-muted hover:opacity-75">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                        </button>
                     </div>
                 </div>
             </div>
+
+            <div class="col-span-2 mt-4">
+                <div id="pushConfigBlock">
+                    {% include 'partials/create_push.html' %}
+                </div>
+                
+                <div id="pullRestConfigBlock" style="display: none;">
+                    {% include 'partials/create_pull_rest.html' %}
+                </div>
+                
+                <div id="pullGraphqlConfigBlock" style="display: none;">
+                    {% include 'partials/create_pull_graphql.html' %}
+                </div>
+            </div>
         </div>
+
     </div>
     
     <!-- Footer: Schedule Settings -->

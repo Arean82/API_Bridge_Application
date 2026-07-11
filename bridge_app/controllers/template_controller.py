@@ -28,7 +28,9 @@ def create_template():
             client_url=data.get('client_url'),
             client_auth_type=data.get('client_auth_type', 'none'),
             client_credentials_json=json.dumps(data.get('client_credentials', {})),
-            field_mapping_json=json.dumps(data.get('field_mapping', {}))
+            destinations_json=json.dumps(data.get('destinations', [])),
+            execution_mode=data.get('execution_mode', 'push'),
+            pull_method=data.get('pull_method', 'GET')
         )
         db.session.add(new_template)
         db.session.commit()
@@ -72,8 +74,12 @@ def update_template(template_id):
         template.client_auth_type = data.get('client_auth_type', template.client_auth_type)
         if 'client_credentials' in data:
             template.client_credentials_json = json.dumps(data.get('client_credentials'))
-        if 'field_mapping' in data:
-            template.field_mapping_json = json.dumps(data.get('field_mapping'))
+        if 'destinations' in data:
+            template.destinations_json = json.dumps(data.get('destinations'))
+        if 'execution_mode' in data:
+            template.execution_mode = data.get('execution_mode')
+        if 'pull_method' in data:
+            template.pull_method = data.get('pull_method')
             
         db.session.commit()
     except ValueError as e:

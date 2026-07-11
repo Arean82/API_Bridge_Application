@@ -7,14 +7,10 @@ import json
 
 def generate_pull_endpoint_swagger_spec(template):
     """
-    Generates an OpenAPI 3.0.3 spec for the given template's pull endpoint.
+    Generates an OpenAPI 3.0.3 spec for the given template's pull endpoints.
     """
-    field_mapping = json.loads(template.field_mapping_json or '[]')
-    properties = {}
-    for mapping in field_mapping:
-        target = mapping.get("target")
-        if target:
-            properties[target] = {"type": "string"}
+    t_dict = template.to_dict()
+    destinations = t_dict.get('destinations', [])
             
     spec = {
         "openapi": "3.0.3",
@@ -26,31 +22,47 @@ def generate_pull_endpoint_swagger_spec(template):
         "servers": [
             {"url": "/"}
         ],
-        "paths": {
-            f"/api/bridge/pull/{template.slug}": {
-                "get": {
-                    "summary": "Fetch and transform data",
-                    "description": "Pulls data from configured sources and translates it into the mapped schema.",
-                    "responses": {
-                        "200": {
-                            "description": "Successful operation",
-                            "content": {
-                                "application/json": {
-                                    "schema": {
-                                        "type": "object",
-                                        "properties": properties
-                                    }
+        "paths": {}
+    }
+    
+    if not destinations:
+        destinations = [{'name': 'default', 'field_mapping': []}]
+        
+    for dest in destinations:
+        d_slug = dest.get('name', 'default').lower().replace(' ', '_').replace('-', '_')
+        d_slug = ''.join(e for e in d_slug if e.isalnum() or e == '_')
+        
+        properties = {}
+        for mapping in dest.get('field_mapping', []):
+            target = mapping.get("target")
+            if target:
+                properties[target] = {"type": "string"}
+                
+        path = f"/api/bridge/pull/{template.slug}/{d_slug}"
+        method = dest.get('method', getattr(template, 'pull_method', None) or 'get').lower()
+        
+        spec["paths"][path] = {
+            method: {
+                "summary": f"Fetch and transform data for {dest.get('name', 'Client')}",
+                "description": "Pulls data from configured sources and translates it into the mapped schema.",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": properties
                                 }
                             }
-                        },
-                        "401": {
-                            "description": "Unauthorized"
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
                     }
                 }
             }
         }
-    }
     
     # Add auth requirements if token is set
     client_creds = json.loads(template.client_credentials_json or '{}')
@@ -63,7 +75,9 @@ def generate_pull_endpoint_swagger_spec(template):
                 }
             }
         }
-        spec["paths"][f"/api/bridge/pull/{template.slug}"]["get"]["security"] = [{"Bearer": []}]
+        for path, methods in spec["paths"].items():
+            for method in methods:
+                spec["paths"][path][method]["security"] = [{"Bearer": []}]
         
     return spec
 

@@ -43,6 +43,7 @@ def pull_and_push_job(job_id):
         def fetch_source_data(idx, src):
             src_url = src.get('url')
             src_auth = src.get('auth_token')
+            src_method = src.get('method', 'GET').upper()
             if not src_url:
                 return {}
             
@@ -52,7 +53,7 @@ def pull_and_push_job(job_id):
             
             local_aggregated = {}
             try:
-                res = requests.get(src_url, headers=headers, timeout=10)
+                res = requests.request(src_method, src_url, headers=headers, timeout=10)
                 if res.status_code == 200:
                     data = res.json()
                     src_data = data[0] if isinstance(data, list) else data
@@ -60,10 +61,9 @@ def pull_and_push_job(job_id):
                     for k, v in src_data.items():
                         local_aggregated[f"source_{idx}.{k}"] = v
                 else:
-                    print(f"Source {idx} ({src_url}) returned {res.status_code}")
+                    print(f"Source {idx} ({src_method} {src_url}) returned {res.status_code}")
             except Exception as e:
                 print(f"Failed to fetch real data from source {idx}: {e}")
-                # Removing mock fallback to avoid injecting fake data in production
                 local_aggregated = {}
             return local_aggregated
 
@@ -74,92 +74,100 @@ def pull_and_push_job(job_id):
                 local_data = future.result()
                 aggregated_data.update(local_data)
     
-        # --- 2. Transform Data ---
-        mapping = t_dict.get('field_mapping', [])
-        if mapping:
-            final_payload = build_nested_payload(mapping, aggregated_data)
-        else:
-            final_payload = aggregated_data
-        
-        # --- 3. Authenticate with Destination ---
-        dest_headers = {'Content-Type': 'application/json'}
-        if template.client_auth_type == 'custom_login':
-            creds = t_dict.get('client_credentials', {})
-            email = creds.get('email')
-            password = creds.get('password')
-        
-            parsed_url = urlparse(template.client_url)
-            base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-            auth_url = f"{base_url}/api/v1/login"
+        # --- 3 & 4. Map & Push to Destinations ---
+        destinations = t_dict.get('destinations', [])
+        # Backward compatibility
+        if not destinations and template.client_url:
+            destinations = [{
+                'url': template.client_url,
+                'method': 'POST',
+                'auth_type': template.client_auth_type,
+                'credentials': t_dict.get('client_credentials', {}),
+                'field_mapping': t_dict.get('field_mapping', [])
+            }]
+            
+        for dest in destinations:
+            dest_url = dest.get('url')
+            if not dest_url:
+                continue
+                
+            mapping = dest.get('field_mapping', [])
+            if mapping:
+                final_payload = build_nested_payload(mapping, aggregated_data)
+            else:
+                final_payload = aggregated_data
+
+            dest_method = dest.get('method', 'POST').upper()
+            dest_auth_type = dest.get('auth_type', 'none')
+            creds = dest.get('credentials', {})
+            
+            dest_headers = {'Content-Type': 'application/json'}
+            if dest_auth_type == 'custom_login':
+                email = creds.get('email')
+                password = creds.get('password')
+                parsed_url = urlparse(dest_url)
+                base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+                auth_url = f"{base_url}/api/v1/login"
+                try:
+                    auth_res = requests.post(auth_url, json={"email": email, "password": password}, timeout=10)
+                    if auth_res.status_code == 200:
+                        token = auth_res.json().get('token')
+                        dest_headers['Authorization'] = f"Bearer {token}"
+                    else:
+                        log_job(job.id, 'FAILED', final_payload, http_status=auth_res.status_code, error_message=f"Auth Failed for {dest_url}")
+                        continue
+                except Exception as e:
+                    log_job(job.id, 'FAILED', final_payload, http_status=500, error_message=f"Auth Request Failed for {dest_url}: {e}")
+                    continue
+            elif dest_auth_type == 'bearer':
+                token = creds.get('token')
+                if token:
+                    dest_headers['Authorization'] = f"Bearer {token}"
+                    
+            req_timeout = creds.get('timeout', 30)
+            req_retries = creds.get('retries', 3)
+
+            from requests.adapters import HTTPAdapter
+            from urllib3.util.retry import Retry
+
+            session = requests.Session()
+            retry_strategy = Retry(
+                total=req_retries,
+                status_forcelist=[429, 500, 502, 503, 504],
+                allowed_methods=["POST", "PUT", "PATCH", "DELETE", "GET"],
+                backoff_factor=1
+            )
+            adapter = HTTPAdapter(max_retries=retry_strategy)
+            session.mount("https://", adapter)
+            session.mount("http://", adapter)
         
             try:
-                auth_res = requests.post(auth_url, json={"email": email, "password": password}, timeout=10)
-                if auth_res.status_code == 200:
-                    token = auth_res.json().get('token')
-                    dest_headers['Authorization'] = f"Bearer {token}"
-                else:
-                    log_job(job.id, 'FAILED', final_payload, http_status=auth_res.status_code, error_message="Auth Failed")
-                    return
-            except Exception as e:
-                log_job(job.id, 'FAILED', final_payload, http_status=500, error_message=f"Auth Request Failed: {e}")
-                return
-        elif template.client_auth_type == 'bearer':
-            creds = t_dict.get('client_credentials', {})
-            token = creds.get('token')
-            if token:
-                dest_headers['Authorization'] = f"Bearer {token}"
-
-        # --- 4. Push to Destination ---
-        creds = t_dict.get('client_credentials', {})
-        req_timeout = creds.get('timeout', 30)
-        req_retries = creds.get('retries', 3)
-
-        from requests.adapters import HTTPAdapter
-        from urllib3.util.retry import Retry
-
-        session = requests.Session()
-        retry_strategy = Retry(
-            total=req_retries,
-            status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["POST"],
-            backoff_factor=1
-        )
-        adapter = HTTPAdapter(max_retries=retry_strategy)
-        session.mount("https://", adapter)
-        session.mount("http://", adapter)
-    
-        try:
-            print(f"Pushing to {template.client_url}")
-            if template.client_url:
-                dest_res = session.post(template.client_url, json=final_payload, headers=dest_headers, timeout=req_timeout)
-            
+                print(f"Pushing to {dest_url} via {dest_method}")
+                dest_res = session.request(dest_method, dest_url, json=final_payload, headers=dest_headers, timeout=req_timeout)
+                
                 if dest_res.status_code >= 400:
                     error_msg = dest_res.text
-                    log_job(job.id, 'FAILED', final_payload, http_status=dest_res.status_code, error_message=error_msg)
-                
-                    # Queue failed payload
+                    log_job(job.id, 'FAILED', final_payload, http_status=dest_res.status_code, error_message=f"[{dest_url}] {error_msg}")
+                    
                     from bridge_app.models.failed_payload import FailedPayload
                     from bridge_app.extensions import db
-                    fp = FailedPayload(job_id=job.id, template_id=template.id, payload_json=json.dumps(final_payload), error_message=error_msg)
+                    fp = FailedPayload(job_id=job.id, template_id=template.id, payload_json=json.dumps(final_payload), error_message=f"[{dest_url}] {error_msg}")
                     db.session.add(fp)
                     db.session.commit()
                 else:
                     log_job(job.id, 'SUCCESS', final_payload, http_status=dest_res.status_code)
-            else:
-                log_job(job.id, 'FAILED', final_payload, http_status=400, error_message="No client URL defined")
-        except Exception as e:
-            error_msg = str(e)
-            log_job(job.id, 'FAILED', final_payload, http_status=500, error_message=error_msg)
-        
-            # Queue failed payload
-            from bridge_app.models.failed_payload import FailedPayload
-            from bridge_app.extensions import db
-            fp = FailedPayload(job_id=job.id, template_id=template.id, payload_json=json.dumps(final_payload), error_message=error_msg)
-            db.session.add(fp)
-            db.session.commit()
+            except Exception as e:
+                error_msg = str(e)
+                log_job(job.id, 'FAILED', final_payload, http_status=500, error_message=f"[{dest_url}] {error_msg}")
+            
+                from bridge_app.models.failed_payload import FailedPayload
+                from bridge_app.extensions import db
+                fp = FailedPayload(job_id=job.id, template_id=template.id, payload_json=json.dumps(final_payload), error_message=f"[{dest_url}] {error_msg}")
+                db.session.add(fp)
+                db.session.commit()
 
 
-def execute_template_mapping(template_id):
+def execute_template_mapping(template_id, destination_slug=None):
     from bridge_app.models.template import TemplateModel
     from bridge_app.app import current_app_instance
     import json
@@ -182,6 +190,7 @@ def execute_template_mapping(template_id):
         def fetch_source_data(idx, src):
             src_url = src.get('url')
             src_auth = src.get('auth_token')
+            src_method = src.get('method', 'GET').upper()
             if not src_url:
                 return {}
             
@@ -191,14 +200,14 @@ def execute_template_mapping(template_id):
             
             local_aggregated = {}
             try:
-                res = requests.get(src_url, headers=headers, timeout=10)
+                res = requests.request(src_method, src_url, headers=headers, timeout=10)
                 if res.status_code == 200:
                     data = res.json()
                     src_data = data[0] if isinstance(data, list) else data
                     for k, v in src_data.items():
                         local_aggregated[f"source_{idx}.{k}"] = v
                 else:
-                    print(f"Pull mode source {idx} ({src_url}) returned {res.status_code}")
+                    print(f"Pull mode source {idx} ({src_method} {src_url}) returned {res.status_code}")
             except Exception as e:
                 print(f"Pull mode fetch error on {src_url}: {e}")
                 local_aggregated = {}
@@ -212,7 +221,19 @@ def execute_template_mapping(template_id):
                 aggregated_data.update(local_data)
         
         # Transform payload using field mapping
-        mapping = t_dict.get('field_mapping', [])
+        destinations = t_dict.get('destinations', [])
+        mapping = []
+        if destination_slug:
+            for d in destinations:
+                d_slug = d.get('name', '').lower().replace(' ', '_').replace('-', '_')
+                d_slug = ''.join(e for e in d_slug if e.isalnum() or e == '_')
+                if d_slug == destination_slug:
+                    mapping = d.get('field_mapping', [])
+                    break
+        elif destinations:
+            # Fallback to first destination if none specified
+            mapping = destinations[0].get('field_mapping', [])
+
         if mapping:
             final_payload = build_nested_payload(mapping, aggregated_data)
         else:

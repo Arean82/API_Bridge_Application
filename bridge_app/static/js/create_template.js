@@ -13,14 +13,9 @@ class CreateTemplateController {
         this.templateName = '';
         this.scheduleImmediately = false;
         
-        this.sources = [];
-        this.clientUrl = '';
         this.executionMode = 'push';
-        this.clientAuthType = 'none';
-        this.clientAuthToken = '';
         this.clientTimeout = 30;
         this.clientRetries = 3;
-        this.mappedFields = [];
         this.scheduleInterval = 60;
 
         this.fullLeft = false;
@@ -55,30 +50,28 @@ class CreateTemplateController {
         // Client Pane
         this.clientPane = document.getElementById('clientPane');
         this.toggleRightFullBtn = document.getElementById('toggleRightFullBtn');
-        this.clientUrlInput = document.getElementById('clientUrl');
-        this.executionModeSelect = document.getElementById('executionMode');
-        this.clientUrlWrapper = document.getElementById('clientUrlWrapper');
-        this.pullEndpointWrapper = document.getElementById('pullEndpointWrapper');
-        this.pullEndpointUrl = document.getElementById('pullEndpointUrl');
-        this.scheduleIntervalWrapper = document.getElementById('scheduleInterval')?.parentElement;
-        this.clientAuthTypeSelect = document.getElementById('clientAuthType');
-        this.clientAuthTokenWrapper = document.getElementById('clientAuthTokenWrapper');
-        this.clientAuthTokenInput = document.getElementById('clientAuthToken');
         
-        this.addFieldRowBtn = document.getElementById('addFieldRowBtn');
-        this.mappingList = document.getElementById('mappingList');
+        // Execution Mode & JS Handlers
+        this.executionModeSelect = document.getElementById('executionMode');
+        
+        this.pushHandler = new window.PushHandler('destinationsContainer', 'addDestinationBtn');
+        this.pullRestHandler = new window.PullRestHandler('restEndpointsContainer', 'addRestEndpointBtn');
+        this.pullGraphqlHandler = new window.PullGraphqlHandler('graphqlEndpointsContainer', 'addGraphqlEndpointBtn');
+        
+        this.scheduleIntervalWrapper = document.getElementById('scheduleInterval')?.parentElement;
+        
+
         
         this.scheduleIntervalInput = document.getElementById('scheduleInterval');
         this.clientTimeoutInput = document.getElementById('clientTimeout');
         this.clientRetriesInput = document.getElementById('clientRetries');
+        
+        this.globalTokenWrapper = document.getElementById('globalTokenWrapper');
+        this.globalSecurityToken = document.getElementById('globalSecurityToken');
+        this.toggleGlobalTokenBtn = document.getElementById('toggleGlobalTokenBtn');
 
         // Value Mapping Modal
-        this.valueMappingModal = document.getElementById('valueMappingModal');
-        this.valueMappingFieldName = document.getElementById('valueMappingFieldName');
-        this.closeValueMappingBtn = document.getElementById('closeValueMappingBtn');
-        this.doneValueMappingBtn = document.getElementById('doneValueMappingBtn');
-        this.valueMappingRowsContainer = document.getElementById('valueMappingRowsContainer');
-        this.addValueMappingRowBtn = document.getElementById('addValueMappingRowBtn');
+
 
         this.bindEvents();
     }
@@ -88,36 +81,38 @@ class CreateTemplateController {
         this.templateNameInput.addEventListener('input', (e) => { 
             this.templateName = e.target.value; 
             this.pageTitle.textContent = this.templateName ? 'Edit ' + this.templateName : 'Create New Template';
+            if (this.pullRestHandler) this.pullRestHandler.setEndpointUrl(this.templateName);
+            if (this.pullGraphqlHandler) this.pullGraphqlHandler.setEndpointUrl(this.templateName);
             this.validateForm();
         });
         this.scheduleImmediatelyInput.addEventListener('change', (e) => { this.scheduleImmediately = e.target.checked; });
         
+        if (this.toggleGlobalTokenBtn && this.globalSecurityToken) {
+            this.toggleGlobalTokenBtn.addEventListener('click', () => {
+                const type = this.globalSecurityToken.getAttribute('type') === 'password' ? 'text' : 'password';
+                this.globalSecurityToken.setAttribute('type', type);
+                this.toggleGlobalTokenBtn.innerHTML = type === 'password' ? 
+                    `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>` : 
+                    `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>`;
+            });
+        }
+        
         this.testMappingBtn.addEventListener('click', () => this.testMapping());
         this.saveBtn.addEventListener('click', () => this.submitForm());
         this.closeTestModalBtn.addEventListener('click', () => this.testModal.style.display = 'none');
-        
         this.addSourceBtn.addEventListener('click', () => this.addSource());
         this.toggleLeftFullBtn.addEventListener('click', () => { this.fullLeft = !this.fullLeft; this.renderPanes(); });
         this.toggleRightFullBtn.addEventListener('click', () => { this.fullRight = !this.fullRight; this.renderPanes(); });
         this.fullPaneBackdrop.addEventListener('click', () => { this.fullLeft = false; this.fullRight = false; this.renderPanes(); });
 
-        this.clientUrlInput.addEventListener('input', (e) => { this.clientUrl = e.target.value; });
         if(this.executionModeSelect) this.executionModeSelect.addEventListener('change', (e) => { this.executionMode = e.target.value; this.renderMode(); });
-        this.clientAuthTypeSelect.addEventListener('change', (e) => { 
-            this.clientAuthType = e.target.value;
-            this.clientAuthTokenWrapper.style.display = this.clientAuthType === 'bearer' ? 'block' : 'none';
-        });
-        this.clientAuthTokenInput.addEventListener('input', (e) => { this.clientAuthToken = e.target.value; });
+        
         
         this.scheduleIntervalInput.addEventListener('input', (e) => { this.scheduleInterval = Math.max(1, parseInt(e.target.value) || 60); });
         this.clientTimeoutInput.addEventListener('input', (e) => { this.clientTimeout = parseInt(e.target.value) || 30; });
         this.clientRetriesInput.addEventListener('input', (e) => { this.clientRetries = parseInt(e.target.value) || 3; });
 
-        this.addFieldRowBtn.addEventListener('click', () => this.addFieldRow());
-        
-        this.closeValueMappingBtn.addEventListener('click', () => this.valueMappingModal.style.display = 'none');
-        this.doneValueMappingBtn.addEventListener('click', () => this.valueMappingModal.style.display = 'none');
-        this.addValueMappingRowBtn.addEventListener('click', () => this.addValueMappingRow());
+
     }
 
     validateForm() {
@@ -136,27 +131,52 @@ class CreateTemplateController {
         }
     }
 
+    renderMode() {
+        const blocks = [document.getElementById('pushConfigBlock'), document.getElementById('pullRestConfigBlock'), document.getElementById('pullGraphqlConfigBlock')];
+        blocks.forEach(b => { if(b) b.style.display = 'none'; });
+        
+        if (this.executionMode === 'push') {
+            document.getElementById('pushConfigBlock').style.display = 'block';
+            if (this.scheduleIntervalWrapper) this.scheduleIntervalWrapper.style.display = 'block';
+            if (this.scheduleImmediatelyInput) this.scheduleImmediatelyInput.parentElement.style.display = 'flex';
+            if (this.globalTokenWrapper) this.globalTokenWrapper.style.display = 'none';
+        } else {
+            if (this.scheduleIntervalWrapper) this.scheduleIntervalWrapper.style.display = 'none';
+            if (this.scheduleImmediatelyInput) this.scheduleImmediatelyInput.parentElement.style.display = 'none';
+            if (this.globalTokenWrapper) this.globalTokenWrapper.style.display = 'block';
+            
+            if (this.executionMode === 'pull_rest') {
+                document.getElementById('pullRestConfigBlock').style.display = 'block';
+            } else if (this.executionMode === 'pull_graphql') {
+                document.getElementById('pullGraphqlConfigBlock').style.display = 'block';
+            }
+        }
+    }
+
     async loadData() {
         if (this.cloneData) {
             let cloneData = this.cloneData;
             this.templateNameInput.value = this.templateName = cloneData.name ? cloneData.name + ' (Copy)' : '';
-            this.clientNameInput.value = this.clientName = cloneData.client_name || '';
-            this.clientUrlInput.value = this.clientUrl = cloneData.client_url || '';
-            this.clientAuthTypeSelect.value = this.clientAuthType = cloneData.client_auth_type || 'none';
-            this.clientAuthTokenWrapper.style.display = this.clientAuthType === 'bearer' ? 'block' : 'none';
+            this.executionMode = cloneData.execution_mode || 'push';
 
             if (cloneData.client_credentials_json) {
                 try {
                     const creds = JSON.parse(cloneData.client_credentials_json);
-                    this.clientAuthTokenInput.value = this.clientAuthToken = creds.token || '';
                     this.clientTimeoutInput.value = this.clientTimeout = creds.timeout || 30;
                     this.clientRetriesInput.value = this.clientRetries = creds.retries !== undefined ? creds.retries : 3;
+                    if (this.globalSecurityToken) this.globalSecurityToken.value = creds.token || '';
                 } catch(e) {}
             } else if (cloneData.client_credentials) {
-                this.clientAuthTokenInput.value = this.clientAuthToken = cloneData.client_credentials.token || '';
                 this.clientTimeoutInput.value = this.clientTimeout = cloneData.client_credentials.timeout || 30;
                 this.clientRetriesInput.value = this.clientRetries = cloneData.client_credentials.retries !== undefined ? cloneData.client_credentials.retries : 3;
+                if (this.globalSecurityToken) this.globalSecurityToken.value = cloneData.client_credentials.token || '';
             }
+
+            this.pushHandler.loadDestinations(cloneData.destinations || []);
+            this.pullRestHandler.setEndpointUrl(this.templateName);
+            this.pullRestHandler.loadData(cloneData.destinations || []);
+            this.pullGraphqlHandler.setEndpointUrl(this.templateName);
+            this.pullGraphqlHandler.loadData(cloneData.destinations || []);
 
             if (cloneData.sources && cloneData.sources.length > 0) {
                 this.sources = cloneData.sources.map(s => ({
@@ -171,28 +191,10 @@ class CreateTemplateController {
                 this.sources = [{ id: Date.now(), connectionId: '', selectedApi: '', url: cloneData.partner_url, auth_token: cloneData.partner_auth_token || '', availableApis: [] }];
             }
 
-            if (cloneData.field_mapping) {
-                if (Array.isArray(cloneData.field_mapping)) {
-                    cloneData.field_mapping.forEach((mapping, i) => {
-                        this.mappedFields.push({
-                            id: Date.now() + i,
-                            source_field: mapping.source || '',
-                            client_name: mapping.target || '',
-                            value_mapping: mapping.value_mapping || []
-                        });
-                    });
-                } else {
-                    Object.entries(cloneData.field_mapping).forEach(([source_field, client_name], i) => {
-                        let sf = source_field;
-                        if (!sf.startsWith('source_')) sf = `source_0.${sf}`;
-                        this.mappedFields.push({ id: Date.now() + i, source_field: sf, client_name: client_name, value_mapping: [] });
-                    });
-                }
-            }
         }
 
-        if (this.sources.length === 0) {
-            this.sources.push({ id: Date.now(), connectionId: '', selectedApi: '', url: '', auth_token: '', availableApis: [] });
+        if (!this.sources || this.sources.length === 0) {
+            this.sources = [{ id: Date.now(), connectionId: '', selectedApi: '', url: '', auth_token: '', availableApis: [] }];
         }
 
         for (let i = 0; i < this.sources.length; i++) {
@@ -200,22 +202,14 @@ class CreateTemplateController {
         }
 
         this.pageTitle.textContent = this.templateName ? 'Edit ' + this.templateName : 'Create New Template';
+        
+        if (this.executionModeSelect) this.executionModeSelect.value = this.executionMode;
+        this.renderMode();
         this.validateForm();
         this.renderSources();
-        this.renderFields();
+        this.updateDestinationFields();
         
         setTimeout(() => {
-            if (window.Sortable) {
-                Sortable.create(this.mappingList, {
-                    handle: '.cursor-move',
-                    animation: 150,
-                    onEnd: (evt) => {
-                        const item = this.mappedFields.splice(evt.oldIndex, 1)[0];
-                        this.mappedFields.splice(evt.newIndex, 0, item);
-                        this.renderFields();
-                    }
-                });
-            }
         }, 500);
     }
 
@@ -234,7 +228,7 @@ class CreateTemplateController {
             }
             if (reRender) {
                 this.renderSources();
-                this.renderFields();
+                this.updateDestinationFields();
             }
         } catch (e) {
             console.error("Failed to load API docs", e);
@@ -246,21 +240,12 @@ class CreateTemplateController {
         this.fetchApiDocs(this.sources.length - 1);
     }
 
-    removeSource(index) {
-        this.sources.splice(index, 1);
+    removeSource(idx) {
+        this.sources.splice(idx, 1);
         this.renderSources();
-        this.renderFields();
     }
 
-    addFieldRow() {
-        this.mappedFields.push({ id: Date.now() + Math.random().toString(), source_field: '', client_name: '', value_mapping: [] });
-        this.renderFields();
-    }
 
-    removeFieldRow(index) {
-        this.mappedFields.splice(index, 1);
-        this.renderFields();
-    }
 
     get currentApiFields() {
         let allFields = [];
@@ -272,12 +257,14 @@ class CreateTemplateController {
                 });
             }
         });
-        this.mappedFields.forEach(m => {
-            if (m.source_field && !allFields.includes(m.source_field)) {
-                allFields.push(m.source_field);
-            }
-        });
         return allFields;
+    }
+
+    updateDestinationFields() {
+        let fields = this.currentApiFields;
+        if (this.pushHandler) this.pushHandler.setAvailableFields(fields);
+        if (this.pullRestHandler) this.pullRestHandler.setAvailableFields(fields);
+        if (this.pullGraphqlHandler) this.pullGraphqlHandler.setAvailableFields(fields);
     }
 
     renderSources() {
@@ -300,9 +287,9 @@ class CreateTemplateController {
                             ${this.swaggerConnections.map(c => `<option value="${c.id}" ${src.connectionId == c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
                         </select>
                     </div>
-                    <div>
+                    <div class="col-span-2">
                         <label class="block text-sm font-medium mb-1">Select API Endpoint</label>
-                        <select class="theme-input w-full p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 src-api-sel" data-idx="${idx}" ${!src.availableApis || src.availableApis.length === 0 ? 'disabled' : ''}>
+                        <select class="theme-input w-full p-2.5 text-sm src-api-sel" data-idx="${idx}" ${!src.availableApis || src.availableApis.length === 0 ? 'disabled' : ''}>
                             <option value="">-- Choose API --</option>
                             ${(src.availableApis || []).map(api => `<option value="${api.path}" ${src.selectedApi === api.path ? 'selected' : ''}>${api.name} (${api.path})</option>`).join('')}
                         </select>
@@ -334,13 +321,14 @@ class CreateTemplateController {
             });
             div.querySelector('.src-conn-sel').addEventListener('change', (e) => { this.sources[idx].connectionId = e.target.value; this.fetchApiDocs(idx); });
             div.querySelector('.src-api-sel').addEventListener('change', (e) => { 
-                this.sources[idx].selectedApi = e.target.value; 
+                let path = e.target.value;
+                this.sources[idx].selectedApi = path || ''; 
                 let conn = this.swaggerConnections.find(c => c.id == this.sources[idx].connectionId);
                 let base = conn && conn.url ? new URL(conn.url).origin : '';
                 if (base && base.endsWith('/')) base = base.slice(0, -1);
-                if (e.target.value) this.sources[idx].url = base + e.target.value;
+                if (path) this.sources[idx].url = base + path;
                 this.renderSources();
-                this.renderFields();
+                this.updateDestinationFields();
             });
             div.querySelector('.src-url-in').addEventListener('input', (e) => this.sources[idx].url = e.target.value);
             div.querySelector('.src-auth-in').addEventListener('input', (e) => this.sources[idx].auth_token = e.target.value);
@@ -394,76 +382,14 @@ class CreateTemplateController {
                 }
             });
             div.querySelector('.field-tgt-in').addEventListener('input', (e) => { this.mappedFields[idx].client_name = e.target.value; });
-            div.querySelector('.field-rm-btn').addEventListener('click', (e) => { e.preventDefault(); this.removeFieldRow(idx); });
+            div.querySelector('.field-rm-btn').addEventListener('click', (e) => { e.preventDefault(); this.mappedFields.splice(idx, 1); this.renderFields(); });
             div.querySelector('.field-val-map-btn').addEventListener('click', (e) => { e.preventDefault(); this.openValueMapping(idx); });
 
             this.mappingList.appendChild(div);
         });
     }
 
-    openValueMapping(index) {
-        this.activeMappingIndex = index;
-        if (!this.mappedFields[index].value_mapping) this.mappedFields[index].value_mapping = [];
-        this.valueMappingFieldName.textContent = this.mappedFields[index].source_field || 'Field';
-        this.renderValueMappingRows();
-        this.valueMappingModal.style.display = 'flex';
-    }
 
-    renderValueMappingRows() {
-        this.valueMappingRowsContainer.innerHTML = '';
-        let mappings = this.mappedFields[this.activeMappingIndex].value_mapping;
-        mappings.forEach((vm, vmIdx) => {
-            const div = document.createElement('div');
-            div.className = 'grid grid-cols-12 gap-2 items-center bg-black/5 p-2 rounded mb-2';
-            div.innerHTML = `
-                <div class="col-span-3"><input type="text" class="theme-input w-full p-1.5 text-sm focus:outline-none vm-src-val" value="${vm.source_val}" placeholder="on"></div>
-                <div class="col-span-2">
-                    <select class="theme-input w-full p-1.5 text-xs focus:outline-none vm-src-type">
-                        <option value="string" ${vm.source_type === 'string' ? 'selected' : ''}>String</option>
-                        <option value="int" ${vm.source_type === 'int' ? 'selected' : ''}>Integer</option>
-                    </select>
-                </div>
-                <div class="col-span-1 text-center font-bold theme-text-muted">&rarr;</div>
-                <div class="col-span-3"><input type="text" class="theme-input w-full p-1.5 text-sm focus:outline-none vm-tgt-val" value="${vm.target_val}" placeholder="1"></div>
-                <div class="col-span-2">
-                    <select class="theme-input w-full p-1.5 text-xs focus:outline-none vm-tgt-type">
-                        <option value="string" ${vm.target_type === 'string' ? 'selected' : ''}>String</option>
-                        <option value="int" ${vm.target_type === 'int' ? 'selected' : ''}>Integer</option>
-                    </select>
-                </div>
-                <div class="col-span-1 text-center">
-                    <button class="text-red-500 hover:text-red-700 text-lg font-bold vm-rm-btn">&times;</button>
-                </div>
-            `;
-            
-            div.querySelector('.vm-src-val').addEventListener('input', (e) => vm.source_val = e.target.value);
-            div.querySelector('.vm-src-type').addEventListener('change', (e) => vm.source_type = e.target.value);
-            div.querySelector('.vm-tgt-val').addEventListener('input', (e) => vm.target_val = e.target.value);
-            div.querySelector('.vm-tgt-type').addEventListener('change', (e) => vm.target_type = e.target.value);
-            div.querySelector('.vm-rm-btn').addEventListener('click', () => { mappings.splice(vmIdx, 1); this.renderValueMappingRows(); });
-            
-            this.valueMappingRowsContainer.appendChild(div);
-        });
-    }
-
-    addValueMappingRow() {
-        if (this.activeMappingIndex !== null) {
-            this.mappedFields[this.activeMappingIndex].value_mapping.push({ source_val: '', source_type: 'string', target_val: '', target_type: 'string' });
-            this.renderValueMappingRows();
-        }
-    }
-
-    testMapping() {
-        const samplePayload = {};
-        this.mappedFields.forEach(f => {
-            if (f.source_field && f.client_name) {
-                samplePayload[f.client_name] = `[Sample value from ${f.source_field}]`;
-            }
-        });
-
-        this.testPayloadPre.textContent = Object.keys(samplePayload).length ? JSON.stringify(samplePayload, null, 2) : '{\n  "message": "No fields mapped yet."\n}';
-        this.testModal.style.display = 'flex';
-    }
 
     showStatus(msg, isError) {
         this.statusMessage.style.display = 'block';
@@ -490,23 +416,29 @@ class CreateTemplateController {
                 sources: this.sources.map(s => ({
                     connectionId: s.connectionId,
                     selectedApi: s.selectedApi,
+                    method: s.method,
                     url: s.url,
                     auth_token: s.auth_token
                 })),
-                client_url: this.clientUrl,
-            execution_mode: this.executionMode,
-                client_auth_type: this.clientAuthType,
+                execution_mode: this.executionMode,
                 client_credentials: {
-                    token: this.clientAuthType === 'bearer' ? this.clientAuthToken : null,
                     timeout: parseInt(this.clientTimeout) || 30,
-                    retries: parseInt(this.clientRetries) || 3
-                },
-                field_mapping: this.mappedFields.map(f => ({
-                    source: f.source_field,
-                    target: f.client_name,
-                    value_mapping: f.value_mapping || []
-                })).filter(f => f.source && f.target)
+                    retries: parseInt(this.clientRetries) || 3,
+                    token: this.globalSecurityToken ? this.globalSecurityToken.value : ''
+                }
             };
+
+            if (this.executionMode === 'push') {
+                payload.destinations = this.pushHandler.getPayload();
+            } else if (this.executionMode === 'pull_rest') {
+                let restPayload = this.pullRestHandler.getPayload();
+                payload.pull_method = restPayload.pull_method;
+                payload.destinations = restPayload.destinations;
+            } else if (this.executionMode === 'pull_graphql') {
+                let gqlPayload = this.pullGraphqlHandler.getPayload();
+                payload.destinations = gqlPayload.destinations;
+                payload.is_graphql = true;
+            }
 
             const response = await fetch('/api/templates', {
                 method: 'POST',

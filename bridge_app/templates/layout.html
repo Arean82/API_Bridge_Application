@@ -57,7 +57,9 @@
     <div class="container mx-auto mt-8 p-4">
         {% block content %}{% endblock %}
     </div>
-
-    <script type="module" src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/push_handler.js') }}?v=4"></script>
+    <script src="{{ url_for('static', filename='js/pull_rest_handler.js') }}?v=4"></script>
+    <script src="{{ url_for('static', filename='js/pull_graphql_handler.js') }}?v=4"></script>
+    <script type="module" src="{{ url_for('static', filename='js/theme.js') }}?v=4"></script>
 </body>
 </html>

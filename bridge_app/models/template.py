@@ -24,7 +24,8 @@ class TemplateModel(db.Model):
     client_auth_type = db.Column(db.String(50), default='none')
     _client_credentials_json = db.Column('client_credentials_json', db.Text, nullable=False, default='{}')
     execution_mode = db.Column(db.String(50), default='push')
-
+    pull_method = db.Column(db.String(10), default='GET')
+    _destinations_json = db.Column('destinations_json', db.Text, nullable=False, default='[]')
     @property
     def slug(self):
         import re
@@ -80,9 +81,18 @@ class TemplateModel(db.Model):
         from bridge_app.services.encryption import encrypt_token
         self._client_credentials_json = encrypt_token(value)
 
-    # Field Mapping (Partner Field -> Client JSON Path)
-    field_mapping_json = db.Column(db.Text, nullable=False, default='{}')
-    
+    @property
+    def destinations_json(self):
+        from bridge_app.services.encryption import decrypt_token
+        return decrypt_token(self._destinations_json)
+        
+    @destinations_json.setter
+    def destinations_json(self, value):
+        from bridge_app.services.encryption import encrypt_token
+        value_str = value if isinstance(value, str) else json.dumps(value)
+        self._destinations_json = encrypt_token(value_str)
+
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
@@ -102,6 +112,11 @@ class TemplateModel(db.Model):
         except:
             client_creds = {}
             
+        try:
+            destinations = json.loads(self.destinations_json) if self.destinations_json else []
+        except:
+            destinations = []
+            
         return {
             'id': self.id,
             'name': self.name,
@@ -112,7 +127,8 @@ class TemplateModel(db.Model):
             'client_url': self.client_url,
             'client_auth_type': self.client_auth_type,
             'client_credentials': client_creds,
-            'field_mapping': json.loads(self.field_mapping_json or '{}'),
+            'destinations': destinations,
             'execution_mode': self.execution_mode,
+            'pull_method': self.pull_method,
             'created_at': self.created_at.isoformat() + "Z"
         }

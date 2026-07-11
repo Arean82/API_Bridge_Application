@@ -7,8 +7,8 @@ from flask import request, jsonify, render_template_string, abort
 import json
 from bridge_app.controllers.engine_controller import api_bp
 
-@api_bp.route('/bridge/pull/<template_slug>', methods=['GET'])
-def pull_endpoint_rest(template_slug):
+@api_bp.route('/bridge/pull/<template_slug>/<dest_slug>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
+def pull_endpoint_rest(template_slug, dest_slug):
     """
     Auto-generated REST endpoint for Pull-mode templates.
     ---
@@ -35,6 +35,23 @@ def pull_endpoint_rest(template_slug):
         from bridge_app.utils.errors import APIError
         raise APIError('Template is not configured for REST Pull mode', 400)
         
+    import json
+    import re
+    destinations = json.loads(template.destinations_json or '[]')
+    
+    def make_slug(name):
+        return re.sub(r'[^a-z0-9]', '_', name.lower())
+        
+    dest = next((d for d in destinations if make_slug(d.get('name', 'client')) == dest_slug), None)
+    if not dest:
+        from bridge_app.utils.errors import APIError
+        raise APIError(f'Destination {dest_slug} not found', 404)
+        
+    expected_method = dest.get('method') or template.pull_method or 'GET'
+    if request.method != expected_method.upper():
+        from bridge_app.utils.errors import APIError
+        raise APIError(f'Method Not Allowed. Expected {expected_method}', 405)
+        
     # Check Auth
     import json
     client_creds = json.loads(template.client_credentials_json or '{}')
@@ -51,7 +68,8 @@ def pull_endpoint_rest(template_slug):
     tracer = trace.get_tracer(__name__)
     with tracer.start_as_current_span("pull_rest_request") as span:
         span.set_attribute("template.id", template_id)
-        result = execute_template_mapping(template_id)
+        span.set_attribute("destination", dest_slug)
+        result = execute_template_mapping(template_id, dest_slug)
         
     if result is None:
         from bridge_app.utils.errors import APIError
@@ -66,8 +84,8 @@ def pull_endpoint_rest(template_slug):
 
 
 
-@api_bp.route('/graphql/<template_slug>', methods=['GET', 'POST'])
-def pull_endpoint_graphql(template_slug):
+@api_bp.route('/graphql/<template_slug>/<dest_slug>', methods=['GET', 'POST'])
+def pull_endpoint_graphql(template_slug, dest_slug):
     from bridge_app.models.template import TemplateModel
     from flask import request, render_template_string, abort
     
@@ -132,7 +150,8 @@ def pull_endpoint_graphql(template_slug):
     tracer = trace.get_tracer(__name__)
     with tracer.start_as_current_span("pull_graphql_request") as span:
         span.set_attribute("template.id", template_id)
-        result = execute_template_mapping(template_id)
+        span.set_attribute("destination", dest_slug)
+        result = execute_template_mapping(template_id, dest_slug)
         
     if result is None:
         from bridge_app.utils.errors import APIError
@@ -142,7 +161,7 @@ def pull_endpoint_graphql(template_slug):
     query = request.json.get('query')
     from bridge_app.services.graphql_service import execute_graphql_query
     try:
-        response = execute_graphql_query(template, query, result)
+        response = execute_graphql_query(template, dest_slug, query, result)
         from flask import jsonify
         return jsonify(response)
     except ValueError as e:

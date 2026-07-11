@@ -91,71 +91,70 @@ def get_api_docs():
         endpoints = []
         paths = docs.get('paths', {})
         for path_name, path_data in paths.items():
-            # Look for any valid HTTP method for response/request schemas
-            method = (path_data.get('get') or path_data.get('post') or 
-                      path_data.get('put') or path_data.get('patch') or 
-                      path_data.get('delete'))
-            if not method:
-                continue
-                
-            fields = []
-            try:
-                responses = method.get('responses', {})
-                success_resp = None
-                for code in ['200', '201', '202', 'default', 200, 201, 202]:
-                    if code in responses or str(code) in responses:
-                        success_resp = responses.get(code) or responses.get(str(code))
-                        break
+            for method_name in ['get', 'post', 'put', 'delete', 'patch']:
+                method = path_data.get(method_name)
+                if not method:
+                    continue
+                    
+                fields = []
+                try:
+                    responses = method.get('responses', {})
+                    success_resp = None
+                    for code in ['200', '201', '202', 'default', 200, 201, 202]:
+                        if code in responses or str(code) in responses:
+                            success_resp = responses.get(code) or responses.get(str(code))
+                            break
+                            
+                    if not success_resp:
+                        continue
                         
-                if not success_resp:
-                    continue
+                    schema = None
                     
-                schema = None
-                
-                # OpenAPI 3.x (3.0, 3.1, 3.2+)
-                if 'content' in success_resp:
-                    for media_type, media_obj in success_resp['content'].items():
-                        if 'schema' in media_obj:
-                            schema = media_obj['schema']
-                            if 'application/json' in media_type:
-                                break # Prefer JSON if available
-                # OpenAPI 2.0 (Swagger)
-                elif 'schema' in success_resp:
-                    schema = success_resp['schema']
+                    # OpenAPI 3.x (3.0, 3.1, 3.2+)
+                    if 'content' in success_resp:
+                        for media_type, media_obj in success_resp['content'].items():
+                            if 'schema' in media_obj:
+                                schema = media_obj['schema']
+                                if 'application/json' in media_type:
+                                    break # Prefer JSON if available
+                    # OpenAPI 2.0 (Swagger)
+                    elif 'schema' in success_resp:
+                        schema = success_resp['schema']
+                        
+                    if not schema:
+                        continue
+                        
+                    # Resolve ref
+                    def resolve_ref(ref_str, full_docs):
+                        parts = ref_str.split('/')
+                        curr = full_docs
+                        for p in parts:
+                            if p == '#': continue
+                            curr = curr.get(p, {})
+                        return curr.get('properties', {})
                     
-                if not schema:
-                    continue
-                    
-                # Resolve ref
-                def resolve_ref(ref_str, full_docs):
-                    parts = ref_str.split('/')
-                    curr = full_docs
-                    for p in parts:
-                        if p == '#': continue
-                        curr = curr.get(p, {})
-                    return curr.get('properties', {})
-                
-                if schema.get('type') == 'array':
-                    items = schema.get('items', {})
-                    if '$ref' in items:
-                        props = resolve_ref(items['$ref'], docs)
+                    if schema.get('type') == 'array':
+                        items = schema.get('items', {})
+                        if '$ref' in items:
+                            props = resolve_ref(items['$ref'], docs)
+                        else:
+                            props = items.get('properties', {})
                     else:
-                        props = items.get('properties', {})
-                else:
-                    if '$ref' in schema:
-                        props = resolve_ref(schema['$ref'], docs)
-                    else:
-                        props = schema.get('properties', {})
+                        if '$ref' in schema:
+                            props = resolve_ref(schema['$ref'], docs)
+                        else:
+                            props = schema.get('properties', {})
+                        
+                    fields = list(props.keys())
+                except Exception as e:
+                    pass
                     
-                fields = list(props.keys())
-            except Exception as e:
-                pass
-                
-            endpoints.append({
-                'name': method.get('summary', path_name),
-                'path': path_name,
-                'fields': fields
-            })
+                endpoints.append({
+                    'path': path_name,
+                    'method': method_name.upper(),
+                    'name': method.get('summary', path_name),
+                    'fields': fields
+                })
             
         return jsonify(endpoints)
     except Exception as e:

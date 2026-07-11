@@ -67,15 +67,28 @@ def generate_graphql_schema_from_mapping(field_mapping):
             
     return graphene.Schema(query=Query)
 
-def execute_graphql_query(template, query, context_data):
+def execute_graphql_query(template, dest_slug, query, context_data):
     """
-    Executes a GraphQL query against the dynamic schema generated for the template.
+    Executes a GraphQL query against the dynamic schema generated for the template and destination.
     Returns a dict with 'data' and/or 'errors'.
     """
     if not query:
         raise ValueError("No query provided")
         
-    field_mapping = json.loads(template.field_mapping_json or '[]')
+    t_dict = template.to_dict()
+    destinations = t_dict.get('destinations', [])
+    field_mapping = []
+    
+    if dest_slug:
+        for d in destinations:
+            d_slug = d.get('name', '').lower().replace(' ', '_').replace('-', '_')
+            d_slug = ''.join(e for e in d_slug if e.isalnum() or e == '_')
+            if d_slug == dest_slug:
+                field_mapping = d.get('field_mapping', [])
+                break
+    elif destinations:
+        field_mapping = destinations[0].get('field_mapping', [])
+        
     schema = generate_graphql_schema_from_mapping(field_mapping)
     
     execution_result = schema.execute(query, context={'payload_data': context_data})
