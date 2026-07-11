@@ -2,7 +2,7 @@
 
 To achieve extreme scaling (hundreds of parallel processes and thousands of concurrent APIs), you can configure the API Bridge to use **Redis** (on Linux) or **Memurai** (on Windows) as its central task broker.
 
-By doing this, you can run `python run.py` (or the compiled `.exe`) on multiple different servers simultaneously. Redis acts as a distributed lock—ensuring that if a scheduled job triggers, only *one* of the servers picks it up and processes it, preventing duplicate data pushes.
+By doing this, you can run `python synora_connect.py` (or the compiled `.exe`) on multiple different servers simultaneously. Redis acts as a distributed lock—ensuring that if a scheduled job triggers, only *one* of the servers picks it up and processes it, preventing duplicate data pushes.
 
 **Note:** Redis/Memurai is used *strictly* for background task coordination. Your application data (Templates, Jobs, Settings) will continue to live securely in your SQLite or PostgreSQL database.
 
@@ -85,7 +85,7 @@ Use the built-in CLI tools to verify connectivity.
 *(A successful connection will return `PONG`)*
 
 ### Method 2: Application Boot Logs
-When you start the API Bridge via `python run.py`, watch the terminal output carefully. 
+When you start the API Bridge via `python synora_connect.py`, watch the terminal output carefully. 
 - If the connection string is correct, APScheduler will silently bind to the RedisJobStore.
 - If the password or port is incorrect, you will immediately see a `redis.exceptions.AuthenticationError` or `redis.exceptions.ConnectionError` in the terminal when booting up.
 
@@ -95,12 +95,12 @@ Once configured, simply start the application on multiple machines:
 
 **Server 1:**
 ```bash
-python run.py
+python synora_connect.py
 ```
 
 **Server 2:**
 ```bash
-python run.py
+python synora_connect.py
 ```
 
 Both servers will connect to the same Redis instance. They will share the workload, fetching data from external APIs simultaneously, providing massive horizontal scale.

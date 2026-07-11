@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universal API Bridge</title>
+    <title>{% block title %}Synora Connect{% endblock %}</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <!-- Tailwind CSS with Local Fallback -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script>window.tailwind || document.write(`<script src="{{ url_for('static', filename='vendor/tailwindcss.js') }}"><\/script>`)</script>
 
     <!-- HTMX with Local Fallback -->
@@ -28,12 +29,16 @@
     
     <nav class="theme-nav p-4 flex justify-between items-center">
         <div class="flex items-center space-x-6">
-            <h1 class="text-2xl font-bold tracking-wide">Universal API Bridge</h1>
+            <a href="/" class="flex items-center space-x-2">
+                <img src="{{ url_for('static', filename='favicon.ico') }}" alt="Synora Connect Logo" class="h-8 w-8">
+                <h1 class="text-2xl font-bold tracking-wide">Synora Connect</h1>
+            </a>
             <nav class="flex gap-4">
-                <a href="/" class="hover:opacity-75 transition">Schedule Config</a>
-                <a href="/templates" class="hover:opacity-75 transition">Templates</a>
-                <a href="/templates/create" class="hover:opacity-75 transition">Create Template</a>
-                <a href="/connections" class="hover:opacity-75 transition text-blue-400 font-bold">Connections</a>
+                <a href="/" class="hover:opacity-75 transition {% if request.path == '/' %}text-blue-400 font-bold{% endif %}">Schedule Config</a>
+                <a href="/templates" class="hover:opacity-75 transition {% if request.path == '/templates' %}text-blue-400 font-bold{% endif %}">Templates</a>
+                <a href="/templates/create" class="hover:opacity-75 transition {% if request.path == '/templates/create' %}text-blue-400 font-bold{% endif %}">Create Template</a>
+                <a href="/connections" class="hover:opacity-75 transition {% if request.path == '/connections' %}text-blue-400 font-bold{% endif %}">Connections</a>
+                <a href="/settings" class="hover:opacity-75 transition {% if request.path == '/settings' %}text-blue-400 font-bold{% endif %}">Settings</a>
             </nav>
         </div>
         <div class="flex items-center space-x-4">

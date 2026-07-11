@@ -99,6 +99,28 @@ def _render_dashboard_rows():
             
     return render_template('partials/dashboard_table_rows.html', jobs=jobs)
 
+@ui_bp.route('/htmx/docs/<filename>')
+def htmx_docs(filename):
+    import os
+    
+    if '..' in filename or '/' in filename:
+        return "Invalid filename", 400
+        
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    
+    if filename == 'README.md':
+        file_path = os.path.join(base_dir, filename)
+    else:
+        file_path = os.path.join(base_dir, 'docs', filename)
+        
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            md_content = f.read()
+            
+        return md_content, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+    except Exception as e:
+        return f"Error loading document: {e}", 500
+
 @ui_bp.route('/templates/create')
 def create_template_page():
     from flask import request
@@ -137,3 +159,68 @@ def connections_page():
     import json
     conns_json = json.dumps([c.to_dict() for c in connections])
     return render_template('connections.html', connections=connections, conns_json=conns_json)
+
+
+@ui_bp.route('/settings', methods=['GET'])
+def settings_page():
+    import os
+    import configparser
+    from flask import current_app
+    
+    config = configparser.ConfigParser()
+    base_dir = os.path.dirname(current_app.root_path)
+    config.read(os.path.join(base_dir, 'config.ini'))
+    
+    return render_template('settings.html', config=config)
+
+@ui_bp.route('/settings/save', methods=['POST'])
+def save_settings():
+    import os
+    import sys
+    import configparser
+    from flask import current_app, request, redirect, url_for
+    
+    base_dir = os.path.dirname(current_app.root_path)
+    config_path = os.path.join(base_dir, 'config.ini')
+    
+    config = configparser.ConfigParser()
+    config.read(config_path)
+    
+    # Store old core settings to detect restart requirement
+    old_server_host = config.get('Server', 'host', fallback='0.0.0.0')
+    old_server_port = config.get('Server', 'port', fallback='5000')
+    old_db_host = config.get('POSTGRES', 'host', fallback='')
+    old_db_name = config.get('POSTGRES', 'database', fallback='')
+    
+    needs_restart = False
+    
+    # Update config from form
+    for key, val in request.form.items():
+        if '.' in key:
+            section, option = key.split('.', 1)
+            if not config.has_section(section):
+                config.add_section(section)
+            config.set(section, option, val)
+            
+    # Check if checkbox was unchecked (form doesn't send unchecked boxes)
+    if 'Server.debug' not in request.form:
+        if config.has_section('Server'):
+            config.set('Server', 'debug', 'False')
+            
+    with open(config_path, 'w') as f:
+        config.write(f)
+        
+    # Check if restart is needed
+    if (config.get('Server', 'host', fallback='') != old_server_host or
+        config.get('Server', 'port', fallback='') != old_server_port or
+        config.get('POSTGRES', 'host', fallback='') != old_db_host or
+        config.get('POSTGRES', 'database', fallback='') != old_db_name):
+        needs_restart = True
+        
+    if needs_restart:
+        # Trigger an os.execl to restart the server
+        print('[System] Core settings changed. Rebooting server...')
+        python = sys.executable
+        os.execl(python, python, *sys.argv)
+        
+    return redirect(url_for('ui.settings_page'))

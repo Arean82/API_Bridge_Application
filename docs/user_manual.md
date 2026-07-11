@@ -1,4 +1,4 @@
-# 📖 Beginner's Guide to the Universal API Bridge
+# 📖 Beginner's Guide to the Synora Connect
 
 Welcome! This guide is written for complete beginners. If you want to take data from an internal system (like your GPS tracker) and push it to an external client without writing code, you are in the right place!
 
@@ -64,7 +64,7 @@ Every time the bridge wakes up and pushes data, OpenTelemetry records a "Trace" 
 
 ### How to see your API Usage right now:
 Currently, the app is running in "Development Mode". 
-If you look at the black terminal screen where you typed `python run.py`, you will see OpenTelemetry printing out detailed receipts every time a job runs. It shows exactly how long the API took to respond, what URL was hit, and the status code.
+If you look at the black terminal screen where you typed `python synora_connect.py`, you will see OpenTelemetry printing out detailed receipts every time a job runs. It shows exactly how long the API took to respond, what URL was hit, and the status code.
 
 ### How to see your API Usage in the future:
 When you are ready to put this app on a real server for production, you can connect OpenTelemetry to a visual dashboard (like **Grafana**, **Jaeger**, or **Zabbix**). 
