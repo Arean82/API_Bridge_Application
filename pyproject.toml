@@ -1,0 +1,10 @@
+[project]
+name = "api-bridge-application"
+version = "0.1.0"
+description = "API Bridge Application"
+authors = [
+    { name = "Arean Narrayan", email = "contact@synorastudio.in" }
+]
+license = { text = "AGPL-3.0" }
+readme = "README.md"
+requires-python = ">=3.12"
