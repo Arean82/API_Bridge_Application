@@ -90,6 +90,17 @@ def pull_endpoint_rest(template_slug, dest_slug):
         from bridge_app.utils.errors import APIError
         raise APIError('Failed to execute mapping', 500)
         
+    # --- Universal Audit Engine ---
+    from bridge_app.services.logger import log_audit
+    log_audit(
+        mode='PULL_REST',
+        caller=request.remote_addr or 'unknown',
+        payload=result,
+        endpoint=request.path,
+        template_id=template_id
+    )
+    # ------------------------------
+
     from flask import jsonify
     return jsonify(result)
 
@@ -204,6 +215,18 @@ def pull_endpoint_graphql(template_slug, dest_slug):
     from bridge_app.services.graphql_service import execute_graphql_query
     try:
         response = execute_graphql_query(template, dest_slug, query, result)
+        
+        # --- Universal Audit Engine ---
+        from bridge_app.services.logger import log_audit
+        log_audit(
+            mode='PULL_GRAPHQL',
+            caller=request.remote_addr or 'unknown',
+            payload=response,
+            endpoint=request.path,
+            template_id=template_id
+        )
+        # ------------------------------
+
         from flask import jsonify
         return jsonify(response)
     except ValueError as e:

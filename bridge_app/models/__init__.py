@@ -23,3 +23,4 @@ from .job import JobModel
 from .job_log import JobLog
 from .swagger_connection import SwaggerConnection
 from .failed_payload import FailedPayload
+from .audit_log import AuditLog

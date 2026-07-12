@@ -1,5 +1,8 @@
 {% for job in jobs %}
 <tr class="hover:bg-black/5 transition">
+    <td class="p-4 w-12 text-center">
+        <input type="checkbox" class="job-checkbox w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" value="{{ job.id }}">
+    </td>
     <td class="p-4 font-semibold">{{ job.client_name or 'N/A' }}</td>
     <td class="p-4 theme-text-muted">{{ job.template_name or 'Unknown' }}</td>
     <td class="p-4">
@@ -31,7 +34,7 @@
 </tr>
 {% else %}
 <tr>
-    <td colspan="6" class="p-12 text-center theme-text-muted">
+    <td colspan="7" class="p-12 text-center theme-text-muted">
         <svg class="mx-auto h-12 w-12 opacity-50 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>

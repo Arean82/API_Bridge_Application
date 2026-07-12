@@ -391,6 +391,50 @@ class CreateTemplateController {
 
 
 
+    async testMapping() {
+        this.testMappingBtn.disabled = true;
+        this.testMappingBtn.textContent = 'Testing...';
+        
+        try {
+            let mapping = [];
+            if (this.executionMode === 'push') {
+                const destinations = this.pushHandler.getPayload();
+                if (destinations && destinations.length > 0) {
+                    mapping = destinations[0].field_mapping || [];
+                }
+            } else if (this.executionMode === 'pull_rest') {
+                const destinations = this.pullRestHandler.getPayload().destinations;
+                if (destinations && destinations.length > 0) {
+                    mapping = destinations[0].field_mapping || [];
+                }
+            } else if (this.executionMode === 'pull_graphql') {
+                const destinations = this.pullGraphqlHandler.getPayload().destinations;
+                if (destinations && destinations.length > 0) {
+                    mapping = destinations[0].field_mapping || [];
+                }
+            }
+
+            const response = await fetch('/api/test_mapping', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mapping: mapping })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.testPayloadPre.textContent = JSON.stringify(data, null, 2);
+                this.testModal.style.display = 'flex';
+            } else {
+                this.showStatus('Failed to generate sample mapping', true);
+            }
+        } catch (error) {
+            this.showStatus('Error testing mapping: ' + error.message, true);
+        } finally {
+            this.testMappingBtn.disabled = false;
+            this.testMappingBtn.textContent = 'Test Mapping';
+        }
+    }
+
     showStatus(msg, isError) {
         this.statusMessage.style.display = 'block';
         this.statusMessage.className = `mb-4 p-4 rounded ${isError ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`;

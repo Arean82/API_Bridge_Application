@@ -16,3 +16,6 @@ redis
 graphene
 customtkinter
 tkintermd
+Flask-SocketIO
+gevent
+gevent-websocket

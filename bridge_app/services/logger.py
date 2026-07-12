@@ -50,3 +50,33 @@ def log_job(job_id, status, payload, http_status=None, error_message=None):
         db.session.commit()
     except Exception as e:
         print(f"Failed to write log for job {job_id}: {e}")
+
+def log_audit(mode, caller, payload, endpoint, template_id, status='SUCCESS'):
+    """
+    Logs every data transaction to the Universal Audit Engine.
+    """
+    try:
+        from bridge_app.models.audit_log import AuditLog
+        from bridge_app.extensions import db
+        import uuid
+        import json
+
+        payload_bytes = len(json.dumps(payload).encode('utf-8')) if payload else 0
+        record_count = len(payload) if isinstance(payload, list) else (len(payload.get('data', {}).values()) if isinstance(payload, dict) and payload.get('data') else 1)
+        
+        audit = AuditLog(
+            transaction_id=str(uuid.uuid4()),
+            mode=mode,
+            caller=caller,
+            bytes_transferred=payload_bytes,
+            record_count=record_count,
+            status=status,
+            endpoint=endpoint,
+            template_id=template_id,
+            payload_json=json.dumps(payload) if payload else None
+        )
+        db.session.add(audit)
+        db.session.commit()
+    except Exception as e:
+        import traceback
+        traceback.print_exc()

@@ -20,8 +20,8 @@
 
 from flask import Flask
 from bridge_app.config import Config
-from bridge_app.extensions import db, scheduler
-from bridge_app.controllers import ui_bp, api_bp, obs_bp
+from bridge_app.extensions import db, scheduler, socketio
+from bridge_app.controllers import ui_bp, api_bp, obs_bp, health_bp
 
 # OpenTelemetry imports
 from opentelemetry.instrumentation.flask import FlaskInstrumentor
@@ -70,6 +70,7 @@ def create_app(config_class=Config):
 
     # Initialize extensions
     db.init_app(app)
+    socketio.init_app(app)
     
     # Initialize Scheduler
     scheduler.init_app(app)
@@ -83,6 +84,7 @@ def create_app(config_class=Config):
     app.register_blueprint(ui_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(obs_bp)
+    app.register_blueprint(health_bp)
 
     # Register Global Error Handlers
     from bridge_app.utils.errors import register_error_handlers
@@ -143,4 +145,4 @@ def create_app(config_class=Config):
 
 if __name__ == '__main__':
     app = create_app()
-    app.run(debug=True, use_reloader=False) # use_reloader=False to prevent duplicate scheduler starts
+    socketio.run(app, debug=True, use_reloader=False) # use_reloader=False to prevent duplicate scheduler starts

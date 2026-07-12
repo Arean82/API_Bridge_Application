@@ -89,6 +89,13 @@ def pull_and_push_job(job_id):
                 local_data = future.result()
                 aggregated_data.update(local_data)
     
+        # --- 2. Live WebSocket Broadcast ---
+        try:
+            from bridge_app.extensions import socketio
+            socketio.emit(f'feed_{template.id}', {'template_id': template.id, 'data': aggregated_data}, namespace='/ws')
+        except Exception as e:
+            print(f"WebSocket broadcast failed: {e}")
+            
         # --- 3 & 4. Map & Push to Destinations ---
         destinations = t_dict.get('destinations', [])
         # Backward compatibility
@@ -160,6 +167,18 @@ def pull_and_push_job(job_id):
                 print(f"Pushing to {dest_url} via {dest_method}")
                 dest_res = session.request(dest_method, dest_url, json=final_payload, headers=dest_headers, timeout=req_timeout)
                 
+                # --- Universal Audit Engine ---
+                status_flag = 'SUCCESS' if dest_res.status_code < 400 else 'FAILED'
+                from bridge_app.services.logger import log_audit
+                log_audit(
+                    mode='PUSH',
+                    caller=f"Job-{job.id}",
+                    payload=final_payload,
+                    endpoint=dest_url,
+                    template_id=template.id,
+                    status=status_flag
+                )
+                # ------------------------------
                 if dest_res.status_code >= 400:
                     error_msg = dest_res.text
                     log_job(job.id, 'FAILED', final_payload, http_status=dest_res.status_code, error_message=f"[{dest_url}] {error_msg}")

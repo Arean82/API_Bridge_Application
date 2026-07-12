@@ -48,6 +48,29 @@ def swagger_docs(id):
 def index():
     return render_template('index.html')
 
+@ui_bp.route('/audit-logs')
+def audit_logs_page():
+    from bridge_app.models.audit_log import AuditLog
+    # Fetch top 100 most recent logs
+    logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).limit(100).all()
+    return render_template('audit_logs.html', logs=logs)
+
+@ui_bp.route('/htmx/audit/<int:log_id>')
+def htmx_audit_details(log_id):
+    from bridge_app.models.audit_log import AuditLog
+    import json
+    log = AuditLog.query.get_or_404(log_id)
+    
+    formatted_payload = ""
+    if log.payload_json:
+        try:
+            parsed = json.loads(log.payload_json)
+            formatted_payload = json.dumps(parsed, indent=2)
+        except Exception:
+            formatted_payload = log.payload_json
+            
+    return render_template('partials/audit_details_modal.html', log=log, formatted_payload=formatted_payload)
+
 @ui_bp.route('/htmx/dashboard/status')
 def htmx_dashboard_status():
     return _render_dashboard_rows()
@@ -80,6 +103,52 @@ def htmx_toggle_job(job_id):
         pass # Handle if job doesn't exist in scheduler
         
     db.session.commit()
+    db.session.commit()
+    return _render_dashboard_rows()
+
+@ui_bp.route('/htmx/dashboard/jobs/bulk_toggle', methods=['POST'])
+def htmx_bulk_toggle_jobs():
+    from bridge_app.models import JobModel
+    from bridge_app.extensions import db, scheduler
+    from bridge_app.services.task_runner import pull_and_push_job
+    from flask import current_app, request
+    
+    action = request.form.get('action') # 'start' or 'stop'
+    job_ids_str = request.form.get('job_ids', '')
+    if not job_ids_str:
+        return _render_dashboard_rows()
+        
+    try:
+        job_ids = [int(jid.strip()) for jid in job_ids_str.split(',') if jid.strip()]
+        jobs = JobModel.query.filter(JobModel.id.in_(job_ids)).all()
+        app = current_app._get_current_object()
+        
+        for job in jobs:
+            job_name = f"job_{job.id}"
+            if action == 'start' and not job.is_active:
+                job.is_active = True
+                try:
+                    scheduler.add_job(
+                        id=job_name, 
+                        func=pull_and_push_job, 
+                        args=[job.id], 
+                        trigger='interval', 
+                        seconds=job.schedule_interval,
+                        replace_existing=True
+                    )
+                except Exception:
+                    pass
+            elif action == 'stop' and job.is_active:
+                job.is_active = False
+                try:
+                    scheduler.remove_job(job_name)
+                except Exception:
+                    pass
+                    
+        db.session.commit()
+    except Exception as e:
+        print(f"Bulk action error: {e}")
+        
     return _render_dashboard_rows()
 
 @ui_bp.route('/htmx/dashboard/job/<int:job_id>', methods=['DELETE'])
