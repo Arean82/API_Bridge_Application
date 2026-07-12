@@ -24,7 +24,7 @@ This application adheres to a clean, scalable **Model-View-Controller + Service 
 ## Quick Start
 
 ### 1. Prerequisites
-- Python 3.10+
+- Python 3.12+
 
 ### 2. Configuration (Required)
 > [!IMPORTANT]
@@ -110,3 +110,10 @@ This page manages your saved configurations (templates), grouped by execution mo
 
 ## Telemetry
 The app is fully instrumented with OpenTelemetry. Traces for HTTP requests and background jobs are printed to the console (for MVP debugging).
+
+## License
+
+Copyright (C) 2026 Arean Narrayan - SynoraStudio
+
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. 
+See the [LICENSE](LICENSE) file for more details.
