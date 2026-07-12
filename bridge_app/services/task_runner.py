@@ -25,6 +25,7 @@ from urllib.parse import urlparse
 import re
 import json
 from bridge_app.services.data_transform import build_nested_payload
+from bridge_app.services.email_service import send_failure_alert
 
 
 def pull_and_push_job(job_id):
@@ -136,10 +137,14 @@ def pull_and_push_job(job_id):
                         token = auth_res.json().get('token')
                         dest_headers['Authorization'] = f"Bearer {token}"
                     else:
-                        log_job(job.id, 'FAILED', final_payload, http_status=auth_res.status_code, error_message=f"Auth Failed for {dest_url}")
+                        error_message = f"Auth Failed for {dest_url}"
+                        log_job(job.id, 'FAILED', final_payload, http_status=auth_res.status_code, error_message=error_message)
+                        send_failure_alert(job.id, template.name, dest_url, error_message)
                         continue
                 except Exception as e:
-                    log_job(job.id, 'FAILED', final_payload, http_status=500, error_message=f"Auth Request Failed for {dest_url}: {e}")
+                    error_message = f"Auth Request Failed for {dest_url}: {e}"
+                    log_job(job.id, 'FAILED', final_payload, http_status=500, error_message=error_message)
+                    send_failure_alert(job.id, template.name, dest_url, error_message)
                     continue
             elif dest_auth_type == 'bearer':
                 token = creds.get('token')
@@ -188,6 +193,7 @@ def pull_and_push_job(job_id):
                     fp = FailedPayload(job_id=job.id, template_id=template.id, payload_json=json.dumps(final_payload), error_message=f"[{dest_url}] {error_msg}")
                     db.session.add(fp)
                     db.session.commit()
+                    send_failure_alert(job.id, template.name, dest_url, error_msg)
                 else:
                     log_job(job.id, 'SUCCESS', final_payload, http_status=dest_res.status_code)
             except Exception as e:
@@ -199,7 +205,7 @@ def pull_and_push_job(job_id):
                 fp = FailedPayload(job_id=job.id, template_id=template.id, payload_json=json.dumps(final_payload), error_message=f"[{dest_url}] {error_msg}")
                 db.session.add(fp)
                 db.session.commit()
-
+                send_failure_alert(job.id, template.name, dest_url, error_msg)
 
 def execute_template_mapping(template_id, destination_slug=None):
     from bridge_app.models.template import TemplateModel

@@ -308,3 +308,67 @@ def save_settings():
         os.execl(python, python, *sys.argv)
         
     return redirect(url_for('ui.settings_page'))
+
+# ==========================================
+# Email Templates Editor Routes
+# ==========================================
+@ui_bp.route('/htmx/email_templates', methods=['GET'])
+def htmx_email_templates_modal():
+    import os
+    from flask import current_app
+    
+    base_dir = os.path.dirname(current_app.root_path)
+    email_dir = os.path.join(base_dir, 'bridge_app', 'templates', 'email')
+    
+    # Ensure directory exists
+    os.makedirs(email_dir, exist_ok=True)
+    
+    template_files = [f for f in os.listdir(email_dir) if f.endswith('.html')]
+    
+    return render_template('partials/email_templates_modal.html', template_files=template_files)
+
+@ui_bp.route('/htmx/email_templates/<filename>', methods=['GET'])
+def htmx_get_email_template(filename):
+    import os
+    from flask import current_app
+    
+    if not filename.endswith('.html'):
+        return "Invalid file type", 400
+        
+    base_dir = os.path.dirname(current_app.root_path)
+    file_path = os.path.join(base_dir, 'bridge_app', 'templates', 'email', filename)
+    
+    if not os.path.exists(file_path):
+        return "Template not found", 404
+        
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return render_template('partials/email_template_editor.html', filename=filename, content=content)
+    except Exception as e:
+        return f"Error reading file: {e}", 500
+
+@ui_bp.route('/htmx/email_templates/<filename>', methods=['POST'])
+def htmx_save_email_template(filename):
+    import os
+    from flask import current_app, request
+    
+    if not filename.endswith('.html'):
+        return "Invalid file type", 400
+        
+    base_dir = os.path.dirname(current_app.root_path)
+    file_path = os.path.join(base_dir, 'bridge_app', 'templates', 'email', filename)
+    
+    new_content = request.form.get('template_content', '')
+    
+    try:
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(new_content)
+        return render_template('partials/email_template_editor.html', filename=filename, content=new_content, success_msg="Template saved successfully!")
+    except Exception as e:
+        # Re-read original to not lose content in editor
+        content = new_content
+        if os.path.exists(file_path):
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+        return render_template('partials/email_template_editor.html', filename=filename, content=content, error_msg=f"Failed to save: {e}")
