@@ -9,14 +9,27 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Left Column -->
             <div>
-                <h3 id="addConnectionTitle" class="text-base font-bold mb-3">Add Swagger Connection</h3>
+                <h3 id="addConnectionTitle" class="text-base font-bold mb-3">Add Connection</h3>
                 <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-medium mb-2">Connection Type</label>
+                        <div class="flex gap-4">
+                            <label class="flex items-center gap-1 cursor-pointer">
+                                <input type="radio" name="connType" value="rest" class="conn-type-radio" checked>
+                                <span class="text-sm font-medium">REST API (Swagger)</span>
+                            </label>
+                            <label class="flex items-center gap-1 cursor-pointer">
+                                <input type="radio" name="connType" value="graphql" class="conn-type-radio">
+                                <span class="text-sm font-medium">GraphQL</span>
+                            </label>
+                        </div>
+                    </div>
                     <div>
                         <label class="block text-xs font-medium mb-1">Connection Name</label>
                         <input type="text" id="connName" class="theme-input w-full p-1.5 text-sm" placeholder="e.g. Partner Tracking API">
                     </div>
                     
-                    <div>
+                    <div id="connSourceTypeSection">
                         <label class="block text-xs font-medium mb-1">Source Type</label>
                         <select id="connIsLocalFile" class="theme-input w-full p-1.5 text-sm">
                             <option value="false">Remote URL</option>
@@ -25,7 +38,7 @@
                     </div>
 
                     <div id="connRemoteSection">
-                        <label class="block text-xs font-medium mb-1">Swagger JSON URL</label>
+                        <label id="connUrlLabel" class="block text-xs font-medium mb-1">Swagger JSON URL</label>
                         <input type="text" id="connUrl" class="theme-input w-full p-1.5 text-sm" placeholder="https://api.partner.com/docs.json">
                     </div>
 

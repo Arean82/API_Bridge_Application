@@ -44,6 +44,15 @@ def swagger_docs(id):
             
     return render_template('swagger_ui.html', conn=conn)
 
+@ui_bp.route('/graphql/test/<int:id>')
+def graphql_docs(id):
+    from bridge_app.models import SwaggerConnection
+    conn = SwaggerConnection.query.get_or_404(id)
+    if conn.connection_type != 'graphql':
+        from flask import abort
+        abort(400, "Not a GraphQL connection")
+    return render_template('graphql_ui.html', conn=conn)
+
 @ui_bp.route('/')
 def index():
     return render_template('index.html')

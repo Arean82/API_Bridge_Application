@@ -60,24 +60,33 @@ def pull_and_push_job(job_id):
             src_url = src.get('url')
             src_auth = src.get('auth_token')
             src_method = src.get('method', 'GET').upper()
+            source_type = src.get('source_type', 'rest')
             if not src_url:
                 return {}
             
-            headers = {}
-            if src_auth:
-                headers['Authorization'] = f"Bearer {src_auth}"
-            
             local_aggregated = {}
             try:
-                res = requests.request(src_method, src_url, headers=headers, timeout=10)
-                if res.status_code == 200:
-                    data = res.json()
+                if source_type == 'graphql':
+                    from bridge_app.services.graphql_service import fetch_from_graphql_source
+                    query = src.get('graphql_query')
+                    data = fetch_from_graphql_source(src_url, query, src_auth)
                     src_data = data[0] if isinstance(data, list) else data
                     # Flat merge into aggregated data with source prefix
                     for k, v in src_data.items():
                         local_aggregated[f"source_{idx}.{k}"] = v
                 else:
-                    print(f"Source {idx} ({src_method} {src_url}) returned {res.status_code}")
+                    headers = {}
+                    if src_auth:
+                        headers['Authorization'] = f"Bearer {src_auth}"
+                    res = requests.request(src_method, src_url, headers=headers, timeout=10)
+                    if res.status_code == 200:
+                        data = res.json()
+                        src_data = data[0] if isinstance(data, list) else data
+                        # Flat merge into aggregated data with source prefix
+                        for k, v in src_data.items():
+                            local_aggregated[f"source_{idx}.{k}"] = v
+                    else:
+                        print(f"Source {idx} ({src_method} {src_url}) returned {res.status_code}")
             except Exception as e:
                 print(f"Failed to fetch real data from source {idx}: {e}")
                 local_aggregated = {}

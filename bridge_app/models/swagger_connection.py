@@ -33,6 +33,8 @@ class SwaggerConnection(db.Model):
     update_interval_hours = db.Column(db.Integer, default=24)
     is_active = db.Column(db.Boolean, default=True)
     
+    connection_type = db.Column(db.String(50), default='rest')
+    
     # Advanced features
     _auth_token = db.Column('auth_token', db.String(1000), nullable=True)
     sync_schedule = db.Column(db.String(100), nullable=True)
@@ -51,7 +53,7 @@ class SwaggerConnection(db.Model):
     last_updated = db.Column(db.DateTime, default=datetime.utcnow)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    def __init__(self, name, url=None, json_content=None, is_local_file=False, local_file_path=None, update_interval_hours=24, is_active=True, auth_token=None, sync_schedule=None, environments=None):
+    def __init__(self, name, url=None, json_content=None, is_local_file=False, local_file_path=None, update_interval_hours=24, is_active=True, auth_token=None, sync_schedule=None, environments=None, connection_type='rest'):
         self.name = name
         self.url = url
         self.json_content = json_content
@@ -62,6 +64,7 @@ class SwaggerConnection(db.Model):
         self.auth_token = auth_token
         self.sync_schedule = sync_schedule
         self.environments = environments
+        self.connection_type = connection_type
 
     def to_dict(self):
         import json
@@ -83,6 +86,7 @@ class SwaggerConnection(db.Model):
             "auth_token": self.auth_token,
             "sync_schedule": self.sync_schedule,
             "environments": envs,
+            "connection_type": self.connection_type,
             "last_updated": self.last_updated.isoformat() + "Z" if self.last_updated else None,
             "created_at": self.created_at.isoformat() + "Z" if self.created_at else None
         }

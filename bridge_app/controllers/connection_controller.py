@@ -45,12 +45,15 @@ def add_connection():
         json_content=data.get('json_content'),
         auth_token=data.get('auth_token'),
         sync_schedule=data.get('sync_schedule'),
-        environments=data.get('environments')
+        environments=data.get('environments'),
+        connection_type=data.get('connection_type', 'rest')
     )
     
     # Fetch initial JSON if URL provided
     error_message = None
-    if conn.url and not conn.is_local_file:
+    if conn.connection_type == 'graphql':
+        conn.is_active = True
+    elif conn.url and not conn.is_local_file:
         try:
             json_text, actual_url = fetch_swagger_json(conn.url)
             import json
@@ -104,6 +107,8 @@ def update_connection(id):
     conn.url = data.get('url', conn.url)
     conn.is_local_file = data.get('is_local_file', conn.is_local_file)
     conn.local_file_path = data.get('local_file_path', conn.local_file_path)
+    if 'connection_type' in data:
+        conn.connection_type = data['connection_type']
     
     # Advanced fields
     if 'auth_token' in data:
@@ -118,7 +123,10 @@ def update_connection(id):
         conn.last_updated = datetime.utcnow()
         
     error_message = None
-    if conn.url and not conn.is_local_file:
+    if conn.connection_type == 'graphql':
+        conn.is_active = True
+        conn.last_updated = datetime.utcnow()
+    elif conn.url and not conn.is_local_file:
         try:
             json_text, actual_url = fetch_swagger_json(conn.url)
             import json
@@ -158,6 +166,9 @@ def refresh_connection(id):
     from datetime import datetime
     
     conn = SwaggerConnection.query.get_or_404(id)
+    if conn.connection_type == 'graphql':
+        from bridge_app.utils.errors import APIError
+        raise APIError("GraphQL connections cannot be refreshed.", 400)
     if conn.is_local_file:
         from bridge_app.utils.errors import APIError
         raise APIError("Cannot refresh local file connections from a URL.", 400)
@@ -184,7 +195,7 @@ def toggle_connection(id):
     data = request.json
     target_state = data.get('is_active', not conn.is_active)
     
-    if target_state == True and not conn.is_local_file:
+    if target_state == True and not conn.is_local_file and conn.connection_type != 'graphql':
         # Trying to enable. Must fetch docs first to ensure it's valid.
         try:
             json_text, actual_url = fetch_swagger_json(conn.url)

@@ -18,7 +18,8 @@ class ConnectionsManager {
             json_content: '',
             auth_token: '',
             sync_schedule: '',
-            environments: ''
+            environments: '',
+            connection_type: 'rest'
         };
     }
     
@@ -27,9 +28,12 @@ class ConnectionsManager {
         this.backdrop = document.getElementById('addConnectionBackdrop');
         this.title = document.getElementById('addConnectionTitle');
         this.nameInput = document.getElementById('connName');
+        this.typeRadios = document.querySelectorAll('.conn-type-radio');
+        this.sourceTypeSection = document.getElementById('connSourceTypeSection');
         this.isLocalSelect = document.getElementById('connIsLocalFile');
         this.remoteSection = document.getElementById('connRemoteSection');
         this.localSection = document.getElementById('connLocalSection');
+        this.urlLabel = document.getElementById('connUrlLabel');
         this.urlInput = document.getElementById('connUrl');
         this.baseUrlInput = document.getElementById('connBaseUrl');
         this.fileInput = document.getElementById('connFileInput');
@@ -67,6 +71,15 @@ class ConnectionsManager {
             this.isLocalSelect.addEventListener('change', (e) => {
                 this.newConn.is_local_file = e.target.value === 'true';
                 this.toggleSourceType();
+            });
+        }
+        
+        if (this.typeRadios) {
+            this.typeRadios.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    this.newConn.connection_type = e.target.value;
+                    this.toggleSourceType();
+                });
             });
         }
         
@@ -115,19 +128,35 @@ class ConnectionsManager {
     }
     
     toggleSourceType() {
-        if (this.newConn.is_local_file) {
-            this.remoteSection.style.display = 'none';
-            this.localSection.style.display = 'block';
+        if (this.newConn.connection_type === 'graphql') {
+            if (this.sourceTypeSection) this.sourceTypeSection.style.display = 'none';
+            if (this.localSection) this.localSection.style.display = 'none';
+            if (this.remoteSection) this.remoteSection.style.display = 'block';
+            if (this.urlLabel) this.urlLabel.textContent = 'GraphQL API Base URL';
+            if (this.urlInput) this.urlInput.placeholder = 'https://api.github.com/graphql';
         } else {
-            this.remoteSection.style.display = 'block';
-            this.localSection.style.display = 'none';
+            if (this.sourceTypeSection) this.sourceTypeSection.style.display = 'block';
+            if (this.urlLabel) this.urlLabel.textContent = 'Swagger JSON URL';
+            if (this.urlInput) this.urlInput.placeholder = 'https://api.partner.com/docs.json';
+            
+            if (this.newConn.is_local_file) {
+                this.remoteSection.style.display = 'none';
+                this.localSection.style.display = 'block';
+            } else {
+                this.remoteSection.style.display = 'block';
+                this.localSection.style.display = 'none';
+            }
         }
     }
     
     populateForm() {
-        this.title.textContent = this.newConn.id ? 'Edit Swagger Connection' : 'Add Swagger Connection';
+        this.title.textContent = this.newConn.id ? 'Edit Connection' : 'Add Connection';
         this.nameInput.value = this.newConn.name || '';
         this.isLocalSelect.value = this.newConn.is_local_file ? 'true' : 'false';
+        
+        if (this.typeRadios) {
+            this.typeRadios.forEach(r => r.checked = (r.value === (this.newConn.connection_type || 'rest')));
+        }
         
         this.toggleSourceType();
         
@@ -148,6 +177,7 @@ class ConnectionsManager {
     
     readForm() {
         this.newConn.name = this.nameInput.value;
+        this.newConn.connection_type = document.querySelector('.conn-type-radio:checked').value;
         this.newConn.is_local_file = this.isLocalSelect.value === 'true';
         if (this.newConn.is_local_file) {
             this.newConn.url = this.baseUrlInput.value;
@@ -189,7 +219,8 @@ class ConnectionsManager {
             json_content: conn.json_content,
             auth_token: conn.auth_token || '',
             sync_schedule: conn.sync_schedule || '',
-            environments: envs_str
+            environments: envs_str,
+            connection_type: conn.connection_type || 'rest'
         };
         this.populateForm();
         this.openModal();

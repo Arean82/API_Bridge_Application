@@ -24,61 +24,99 @@ import re
 
 def generate_graphql_schema_from_mapping(field_mapping):
     """
-    Dynamically generates a Graphene GraphQL schema based on the provided field mapping.
+    Dynamically generates a Graphene GraphQL schema with proper nesting based on the provided field mapping.
     """
-    # We dynamically create attributes for our ObjectType based on the field_mapping targets
-    attrs = {}
-    for mapping in field_mapping:
-        target = mapping.get("target")
-        if target:
-            # Clean up the target name for GraphQL (replace dots, brackets with underscores)
-            safe_name = re.sub(r'[^a-zA-Z0-9_]', '_', target)
-            attrs[safe_name] = graphene.String()
+    def build_schema_dict(mapping_list):
+        schema_dict = {}
+        for mapping in mapping_list:
+            target = mapping.get("target")
+            if not target: continue
             
-    # Create the dynamic type
-    DynamicType = type("DynamicPayload", (graphene.ObjectType,), attrs)
+            parts = []
+            for part in target.split('.'):
+                array_match = re.match(r'(.+)\[(\d*)\]', part)
+                if array_match:
+                    key = array_match.group(1)
+                    parts.append((re.sub(r'[^a-zA-Z0-9_]', '_', key), True))
+                else:
+                    parts.append((re.sub(r'[^a-zA-Z0-9_]', '_', part), False))
+
+            current = schema_dict
+            for i, (key, is_list) in enumerate(parts):
+                if key not in current:
+                    current[key] = {'_is_list': is_list}
+                else:
+                    current[key]['_is_list'] = current[key]['_is_list'] or is_list
+
+                if i == len(parts) - 1:
+                    current[key]['_type'] = "String"
+                else:
+                    current = current[key]
+        return schema_dict
+
+    def create_graphene_type(name, s_dict):
+        attrs = {}
+        for key, value in s_dict.items():
+            if key.startswith('_'): continue
+            
+            is_list = value.get('_is_list', False)
+            if '_type' in value:
+                field = graphene.String
+            else:
+                field = create_graphene_type(f"{name}_{key}", value)
+                
+            if is_list:
+                attrs[key] = graphene.List(field)
+            else:
+                attrs[key] = graphene.Field(field) if not hasattr(field, 'parse_literal') else field()
+                
+        return type(name, (graphene.ObjectType,), attrs)
+
+    schema_dict = build_schema_dict(field_mapping)
+    DynamicType = create_graphene_type("DynamicPayload", schema_dict)
     
+    def clean_dict_keys(data):
+        if isinstance(data, dict):
+            new_data = {}
+            for k, v in data.items():
+                safe_k = re.sub(r'[^a-zA-Z0-9_]', '_', k)
+                new_data[safe_k] = clean_dict_keys(v)
+            return new_data
+        elif isinstance(data, list):
+            return [clean_dict_keys(item) for item in data]
+        return data
+
     class Query(graphene.ObjectType):
         payload = graphene.Field(DynamicType)
         
         def resolve_payload(self, info):
-            # The data will be passed in through context
+            # The data is already nested via data_transform.py. We just need to sanitize keys.
             data = info.context.get('payload_data', {})
+            clean_data = clean_dict_keys(data)
             
-            def get_nested_value(current_data, path):
-                import re
-                parts = path.split('.')
-                current = current_data
-                for part in parts:
-                    array_match = re.match(r'(.+)\[(\d*)\]', part)
-                    if array_match:
-                        key = array_match.group(1)
-                        idx_str = array_match.group(2)
-                        idx = int(idx_str) if idx_str else 0
-                        if isinstance(current, dict) and key in current:
-                            current = current[key]
-                            if isinstance(current, list) and len(current) > idx:
-                                current = current[idx]
+            # Helper to convert dicts to Graphene types
+            def dict_to_graphene(data_dict, graphene_type):
+                if not data_dict or not isinstance(data_dict, dict):
+                    return None
+                kwargs = {}
+                for key, val in data_dict.items():
+                    if hasattr(graphene_type, key):
+                        field_type = getattr(graphene_type, key).type
+                        
+                        # Handle lists
+                        if isinstance(val, list):
+                            if hasattr(field_type, 'of_type') and hasattr(field_type.of_type, '_meta'):
+                                kwargs[key] = [dict_to_graphene(item, field_type.of_type) for item in val]
                             else:
-                                return None
+                                kwargs[key] = val
+                        # Handle nested objects
+                        elif isinstance(val, dict) and hasattr(field_type, '_meta'):
+                            kwargs[key] = dict_to_graphene(val, field_type)
                         else:
-                            return None
-                    else:
-                        if isinstance(current, dict) and part in current:
-                            current = current[part]
-                        else:
-                            return None
-                return current
-
-            # Map the clean names back to the data we have
-            resolver_data = {}
-            for mapping in field_mapping:
-                target = mapping.get("target")
-                if target:
-                    safe_name = re.sub(r'[^a-zA-Z0-9_]', '_', target)
-                    resolver_data[safe_name] = get_nested_value(data, target)
-                    
-            return DynamicType(**resolver_data)
+                            kwargs[key] = val
+                return graphene_type(**kwargs)
+                
+            return dict_to_graphene(clean_data, DynamicType)
             
     return graphene.Schema(query=Query)
 
@@ -114,3 +152,70 @@ def execute_graphql_query(template, dest_slug, query, context_data):
         response['data'] = execution_result.data
         
     return response
+
+import requests
+
+def fetch_from_graphql_source(url, query, auth_token=None):
+    """Executes a GraphQL query against an external source."""
+    headers = {"Content-Type": "application/json"}
+    if auth_token:
+        headers["Authorization"] = f"Bearer {auth_token}"
+        
+    response = requests.post(url, json={"query": query}, headers=headers, timeout=15)
+    response.raise_for_status()
+    result = response.json()
+    if 'errors' in result:
+        raise ValueError(f"GraphQL Source returned errors: {result['errors']}")
+    return result.get('data', {})
+
+def introspect_graphql_endpoint(url, auth_token=None):
+    """Fetches the Introspection schema from an external GraphQL endpoint."""
+    introspection_query = '''
+    query IntrospectionQuery {
+      __schema {
+        queryType { name }
+        mutationType { name }
+        types { ...FullType }
+      }
+    }
+    fragment FullType on __Type {
+      kind
+      name
+      fields(includeDeprecated: true) {
+        name
+        args { ...InputValue }
+        type { ...TypeRef }
+      }
+      inputFields { ...InputValue }
+      interfaces { ...TypeRef }
+      enumValues(includeDeprecated: true) { name }
+      possibleTypes { ...TypeRef }
+    }
+    fragment InputValue on __InputValue {
+      name
+      type { ...TypeRef }
+    }
+    fragment TypeRef on __Type {
+      kind
+      name
+      ofType {
+        kind
+        name
+        ofType {
+          kind
+          name
+          ofType {
+            kind
+            name
+          }
+        }
+      }
+    }
+    '''
+    headers = {"Content-Type": "application/json"}
+    if auth_token:
+        headers["Authorization"] = f"Bearer {auth_token}"
+        
+    response = requests.post(url, json={"query": introspection_query}, headers=headers, timeout=15)
+    response.raise_for_status()
+    return response.json()
