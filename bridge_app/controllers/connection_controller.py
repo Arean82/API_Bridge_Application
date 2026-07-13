@@ -23,6 +23,23 @@ import json
 from bridge_app.controllers.engine_controller import api_bp
 from bridge_app.services.swagger_utils import fetch_swagger_json, fix_swagger_urls
 
+def get_connection_headers(conn):
+    headers = {}
+    if conn.custom_headers:
+        headers.update(conn.custom_headers)
+    
+    if conn.auth_type == 'bearer' and conn.auth_config and 'token' in conn.auth_config:
+        headers['Authorization'] = f"Bearer {conn.auth_config['token']}"
+    elif conn.auth_type == 'api_key' and conn.auth_config and 'header_name' in conn.auth_config and 'header_value' in conn.auth_config:
+        headers[conn.auth_config['header_name']] = conn.auth_config['header_value']
+    elif conn.auth_type == 'basic' and conn.auth_config and 'username' in conn.auth_config and 'password' in conn.auth_config:
+        import base64
+        credentials = f"{conn.auth_config['username']}:{conn.auth_config['password']}"
+        encoded_credentials = base64.b64encode(credentials.encode()).decode('utf-8')
+        headers['Authorization'] = f"Basic {encoded_credentials}"
+        
+    return headers
+
 # --- Swagger Connections CRUD ---
 @api_bp.route('/connections', methods=['GET'])
 def get_connections():
@@ -46,7 +63,14 @@ def add_connection():
         auth_token=data.get('auth_token'),
         sync_schedule=data.get('sync_schedule'),
         environments=data.get('environments'),
-        connection_type=data.get('connection_type', 'rest')
+        connection_type=data.get('connection_type', 'rest'),
+        auth_type=data.get('auth_type', 'none'),
+        auth_config=data.get('auth_config'),
+        custom_headers=data.get('custom_headers'),
+        schema_source=data.get('schema_source', 'introspection'),
+        spec_auth_type=data.get('spec_auth_type', 'none'),
+        spec_auth_config=data.get('spec_auth_config'),
+        spec_custom_headers=data.get('spec_custom_headers')
     )
     
     # Fetch initial JSON if URL provided
@@ -55,7 +79,8 @@ def add_connection():
         conn.is_active = True
     elif conn.url and not conn.is_local_file:
         try:
-            json_text, actual_url = fetch_swagger_json(conn.url)
+            req_headers = get_connection_headers(conn)
+            json_text, actual_url = fetch_swagger_json(conn.url, headers=req_headers)
             import json
             conn.json_content = json.dumps(json_text) if isinstance(json_text, dict) else json_text
             conn.is_active = True
@@ -117,6 +142,20 @@ def update_connection(id):
         conn.sync_schedule = data['sync_schedule']
     if 'environments' in data:
         conn.environments = data['environments']
+    if 'auth_type' in data:
+        conn.auth_type = data['auth_type']
+    if 'auth_config' in data:
+        conn.auth_config = data['auth_config']
+    if 'custom_headers' in data:
+        conn.custom_headers = data['custom_headers']
+    if 'schema_source' in data:
+        conn.schema_source = data['schema_source']
+    if 'spec_auth_type' in data:
+        conn.spec_auth_type = data['spec_auth_type']
+    if 'spec_auth_config' in data:
+        conn.spec_auth_config = data['spec_auth_config']
+    if 'spec_custom_headers' in data:
+        conn.spec_custom_headers = data['spec_custom_headers']
         
     if data.get('json_content'):
         conn.json_content = data.get('json_content')
@@ -128,7 +167,8 @@ def update_connection(id):
         conn.last_updated = datetime.utcnow()
     elif conn.url and not conn.is_local_file:
         try:
-            json_text, actual_url = fetch_swagger_json(conn.url)
+            req_headers = get_connection_headers(conn)
+            json_text, actual_url = fetch_swagger_json(conn.url, headers=req_headers)
             import json
             conn.json_content = json.dumps(json_text) if isinstance(json_text, dict) else json_text
             conn.last_updated = datetime.utcnow()
@@ -281,3 +321,40 @@ def mock_server(conn_id, path):
                 
     return jsonify({"_mock_message": "No static example defined in spec for this endpoint."}), 200
 
+@api_bp.route('/connections/validate', methods=['POST'])
+def validate_connection_spec():
+    from bridge_app.services.openapi_validator import OpenAPIValidator
+    
+    data = request.json
+    source_type = data.get('source_type')  # 'url', 'file', 'paste'
+    content = data.get('content')
+    url = data.get('url')
+    
+    auth_headers = {}
+    auth_type = data.get('spec_auth_type', 'none')
+    auth_config = data.get('spec_auth_config')
+    custom_headers = data.get('spec_custom_headers', {})
+    
+    if custom_headers:
+        auth_headers.update(custom_headers)
+        
+    if auth_type == 'bearer' and auth_config and 'token' in auth_config:
+        auth_headers['Authorization'] = f"Bearer {auth_config['token']}"
+    elif auth_type == 'api_key' and auth_config and 'header_name' in auth_config and 'header_value' in auth_config:
+        auth_headers[auth_config['header_name']] = auth_config['header_value']
+    elif auth_type == 'basic' and auth_config and 'username' in auth_config and 'password' in auth_config:
+        import base64
+        credentials = f"{auth_config['username']}:{auth_config['password']}"
+        encoded = base64.b64encode(credentials.encode()).decode('utf-8')
+        auth_headers['Authorization'] = f"Basic {encoded}"
+
+    validator = OpenAPIValidator()
+    
+    if source_type == 'url':
+        result = validator.process_and_validate(url=url, auth_headers=auth_headers)
+    elif source_type in ['file', 'paste']:
+        result = validator.process_and_validate(content=content)
+    else:
+        return jsonify({"success": False, "error": "Invalid source_type specified"}), 400
+        
+    return jsonify(result)

@@ -25,3 +25,6 @@ scratch/
 sample/
 instance/
 logs/
+
+# Node / JS
+node_modules/

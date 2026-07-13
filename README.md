@@ -19,6 +19,8 @@ This application adheres to a clean, scalable **Model-View-Controller + Service 
 - **Dynamic Environments**: Configure multiple environment URLs (Dev/Staging/Prod) per connection and seamlessly switch between them in the UI.
 - **Pull REST Mode**: Auto-generates live Swagger UI endpoints (`/api/bridge/pull/<slug>/<dest>/`) with full OpenAPI spec from your field mappings. Dynamically supports **OpenAPI 3.2.0 (default), 3.1.0, 3.0.3, and Swagger 2.0** on the fly.
 - **Pull GraphQL Mode**: Auto-generates a GraphQL Playground IDE (`/api/graphql/<slug>/<dest>/`) with a dynamic schema built from your field mappings.
+- **Production OpenAPI Validation**: Strict validation pipeline using `openapi-spec-validator` guaranteeing Swagger 2.0 and OpenAPI 3.x document integrity, with built-in SSRF protection and `$ref` resolution.
+- **Dual-Authentication Layer**: Decouples API Specification fetching from Upstream API execution. You can safely fetch specs from public docs while sending strict Bearer tokens to private upstream servers.
 - **Multi-Destination Support**: Each template supports multiple destination endpoints, each with independent field mappings, auth, and HTTP methods.
 
 ## Quick Start
