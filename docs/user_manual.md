@@ -50,7 +50,7 @@ If you click **Templates** in the top navigation bar, you can manage the reusabl
 - **Edit**: Clicking Edit opens a popup where you can rename your template, change the API keys, or adjust your Field Mappings instantly.
 - **Edit as New**: Opens the full Create page pre-filled with data from an existing template. This lets you create a variation without modifying the original.
 - **Clone**: This is a massive time-saver. If you have a completely mapped out GPS feed and you want to send it to a *new* client, click **Clone**. A popup will appear perfectly pre-filled with your Source config and Mappings. All you have to do is type in the new Destination URL and hit Save!
-- **Swagger UI** (Pull REST only): Click this button to open a fully interactive Swagger documentation page for your template's REST endpoints.
+- **Swagger UI** (Pull REST only): Click this button to open a fully interactive Swagger documentation page for your template's REST endpoints. The Swagger UI will dynamically support **OpenAPI 3.1.0, 3.0.3, and Swagger 2.0** formats, allowing legacy clients to view the API schema exactly as they need it via embedded links.
 - **GraphQL IDE** (Pull GraphQL only): Click this button to open the GraphQL Playground where you can write and test queries against your dynamic schema.
 - **Delete**: Removes the template and all associated scheduled jobs.
 
