@@ -51,14 +51,14 @@ def fix_swagger_urls(data, source_url):
     return data
 
 
-def fetch_swagger_json(url):
+def fetch_swagger_json(url, headers=None):
     """
     Fetch Swagger/OpenAPI JSON from a URL.
     If the URL returns HTML instead of JSON, attempt to extract
     the spec URL from the HTML and fetch that instead.
     Returns (json_text, actual_url) tuple.
     """
-    resp = requests.get(url, timeout=10)
+    resp = requests.get(url, headers=headers, timeout=10)
     if not resp.ok:
         raise ValueError(f"HTTP {resp.status_code}")
         
@@ -69,13 +69,16 @@ def fetch_swagger_json(url):
         html = resp.text
         match = re.search(r'url:\s*["\']([^"\']+)["\']', html)
         if match:
-            json_url = urljoin(url, match.group(1))
-            resp2 = requests.get(json_url, timeout=10)
-            if not resp2.ok:
-                raise ValueError(f"Extracted JSON URL {json_url} but got HTTP {resp2.status_code}")
+            spec_url = match.group(1)
+            if not spec_url.startswith('http'):
+                spec_url = urljoin(url, spec_url)
+            
+            spec_resp = requests.get(spec_url, headers=headers, timeout=10)
+            if not spec_resp.ok:
+                raise ValueError(f"Extracted JSON URL {spec_url} but got HTTP {spec_resp.status_code}")
             try:
-                data = resp2.json()
-                return fix_swagger_urls(data, json_url), json_url
+                data = spec_resp.json()
+                return fix_swagger_urls(data, spec_url), spec_url
             except Exception:
                 pass
         raise ValueError("URL does not return valid JSON and no Swagger URL could be extracted.")

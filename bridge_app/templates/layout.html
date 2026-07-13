@@ -5,9 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Synora Bridge{% endblock %}</title>
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <!-- Tailwind CSS with Local Fallback -->
-    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
-    <script>window.tailwind || document.write(`<script src="{{ url_for('static', filename='vendor/tailwindcss.js') }}"><\/script>`)</script>
+    <!-- Tailwind CSS Production Build -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind-output.css') }}">
 
     <!-- HTMX with Local Fallback -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
@@ -17,11 +16,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css" onerror="this.onerror=null; this.href=`{{ url_for('static', filename='vendor/highlight-default.min.css') }}`;">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
     <script>window.hljs || document.write(`<script src="{{ url_for('static', filename='vendor/highlight.min.js') }}"><\/script>`)</script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class'
-        }
-    </script>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>

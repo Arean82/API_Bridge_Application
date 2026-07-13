@@ -27,4 +27,5 @@ from .health_controller import health_bp
 from . import template_controller
 from . import job_controller
 from . import connection_controller
-from . import pull_controller
+from . import pull_rest_controller
+from . import pull_graphql_controller

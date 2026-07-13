@@ -26,6 +26,22 @@ from bridge_app.services.task_runner import pull_and_push_job
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
+@api_bp.route('/bridge/graphql_introspect', methods=['POST'])
+def graphql_introspect():
+    data = request.json
+    url = data.get('url')
+    auth_token = data.get('auth_token')
+    
+    if not url:
+        return jsonify({"error": "URL is required"}), 400
+        
+    from bridge_app.services.graphql_service import introspect_graphql_endpoint
+    try:
+        schema = introspect_graphql_endpoint(url, auth_token)
+        return jsonify(schema)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @api_bp.route('/test_mapping', methods=['POST'])
 def test_mapping():
     data = request.json

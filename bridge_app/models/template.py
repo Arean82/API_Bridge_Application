@@ -76,10 +76,15 @@ class TemplateModel(db.Model):
                 raise ValueError("Sources array cannot be empty.")
                 
             for idx, src in enumerate(parsed):
-                if not src.get('selectedApi'):
-                    raise ValueError(f"Endpoint {idx+1} must have a selected API endpoint.")
+                source_type = src.get('source_type', 'rest')
                 if not src.get('url'):
                     raise ValueError(f"Endpoint {idx+1} must have a Source URL.")
+                if source_type == 'rest':
+                    if not src.get('selectedApi'):
+                        raise ValueError(f"Endpoint {idx+1} must have a selected API endpoint.")
+                elif source_type == 'graphql':
+                    if not src.get('graphql_query'):
+                        raise ValueError(f"Endpoint {idx+1} must have a GraphQL query.")
                     
         except json.JSONDecodeError:
             raise ValueError("Invalid sources JSON format.")
