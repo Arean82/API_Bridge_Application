@@ -5,6 +5,9 @@
 <div class="max-w-4xl mx-auto mt-8">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-gray-800 dark:text-white">System Configuration</h1>
+        <button type="button" id="toggle-all-sections-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition focus:outline-none">
+            Collapse All
+        </button>
     </div>
 
     <!-- Restart Warning Banner -->
@@ -21,57 +24,26 @@
         </div>
     </div>
 
-    <!-- Documentation Modal (Readme) -->
-    <div
-        class="theme-panel overflow-hidden mb-6">
-        <div
-            class="px-6 py-4 border-b border-gray-200 dark:border-gray-600 bg-black/5 dark:bg-white/5 flex justify-between items-center">
-            <div>
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Documentation</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400">View application manuals.</p>
-            </div>
-            <button type="button" id="view-readme-btn" onclick="document.getElementById('docs-modal').classList.remove('hidden')"
-                class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition">
-                View README
-            </button>
-        </div>
-    </div>
+
 
     <!-- HTML Modal for Docs (Client Side Markdown Rendering) -->
     {% include 'partials/docs_modal.html' %}
 
-    <!-- Local JS for Markdown -->
-    <script src="{{ url_for('static', filename='vendor/marked.min.js') }}"></script>
     
-    <script>
-        function loadReadme(filename) {
-            const container = document.getElementById('markdown-container');
-            container.innerHTML = "Loading...";
-            fetch('/htmx/docs/' + filename)
-                .then(response => response.text())
-                .then(text => {
-                    container.innerHTML = marked.parse(text);
-                })
-                .catch(err => {
-                    container.innerHTML = "Error loading readme: " + err;
-                });
-        }
-        
-        // Auto-load main readme when opening
-        document.getElementById('view-readme-btn').addEventListener('click', () => {
-            loadReadme('README.md');
-        });
-    </script>
 
         <form id="settings-form" action="/settings/save" method="POST" class="space-y-6">
 
             <!-- Server Section (Core) -->
-            <div
-                class="theme-panel overflow-hidden mb-6">
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-600 bg-black/5 dark:bg-white/5">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Server Settings</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Core application hosting configurations.</p>
-                </div>
+            <details open class="theme-panel overflow-hidden mb-6 group">
+                <summary class="px-6 py-4 border-b border-gray-200 dark:border-gray-600 bg-black/5 dark:bg-white/5 cursor-pointer list-none flex justify-between items-center outline-none focus:ring-2 focus:ring-indigo-500">
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Server Settings</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Core application hosting configurations.</p>
+                    </div>
+                    <span class="transition-transform duration-300 group-open:rotate-180">
+                        <svg class="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                    </span>
+                </summary>
                 <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Host IP</label>
@@ -100,14 +72,18 @@
                         <label class="ml-2 block text-sm text-gray-900 dark:text-gray-300">Enable Debug Mode</label>
                     </div>
                 </div>
-            </div>
+            </details>
 
             <!-- Database Settings (Core) -->
-            <div
-                class="theme-panel overflow-hidden mb-6">
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-600 bg-black/5 dark:bg-white/5">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">PostgreSQL Configuration</h3>
-                </div>
+            <details class="theme-panel overflow-hidden mb-6 group">
+                <summary class="px-6 py-4 border-b border-gray-200 dark:border-gray-600 bg-black/5 dark:bg-white/5 cursor-pointer list-none flex justify-between items-center outline-none focus:ring-2 focus:ring-indigo-500">
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">PostgreSQL Configuration</h3>
+                    </div>
+                    <span class="transition-transform duration-300 group-open:rotate-180">
+                        <svg class="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                    </span>
+                </summary>
                 <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Host</label>
@@ -153,17 +129,27 @@
                         </script>
                     </div>
                 </div>
-            </div>
+            </details>
 
             <!-- UI & Background Tasks (Instant) -->
             <!-- UI, Scaling & Background Tasks -->
-            <div class="theme-panel overflow-hidden mb-6">
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-600 bg-black/5 dark:bg-white/5">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Preferences & Scaling</h3>
-                </div>
+            <details open class="theme-panel overflow-hidden mb-6 group">
+                <summary class="px-6 py-4 border-b border-gray-200 dark:border-gray-600 bg-black/5 dark:bg-white/5 cursor-pointer list-none flex justify-between items-center outline-none focus:ring-2 focus:ring-indigo-500">
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Preferences & Scaling</h3>
+                    </div>
+                    <span class="transition-transform duration-300 group-open:rotate-180">
+                        <svg class="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                    </span>
+                </summary>
                 <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-
                     <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Navigation Layout</label>
+                        <select name="UI.layout" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
+                            <option value="sidebar" {% if config.get('UI', 'layout', fallback='sidebar')=='sidebar' %}selected{% endif %}>Left Sidebar</option>
+                            <option value="top" {% if config.get('UI', 'layout', fallback='sidebar')=='top' %}selected{% endif %}>Top Navbar</option>
+                        </select>
+                    </div>                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">UI Theme</label>
                         <select name="UI.theme"
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
@@ -182,7 +168,17 @@
                             <option value="light" {% if config.get('UI', 'colormode')=='light' %}selected{% endif %}>Light</option>
                             <option value="dark" {% if config.get('UI', 'colormode')=='dark' %}selected{% endif %}>Dark</option>
                         </select>
-                    </div>                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                    </div>                    
+                    
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Navigation Layout</label>
+                        <select name="UI.layout" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
+                            <option value="sidebar" {% if config.get('UI', 'layout', fallback='sidebar')=='sidebar' %}selected{% endif %}>Sidebar (Left)</option>
+                            <option value="top" {% if config.get('UI', 'layout', fallback='sidebar')=='top' %}selected{% endif %}>Top Navigation Bar</option>
+                        </select>
+                    </div>
+
+                    <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Timezone</label>
                         <input type="text" name="Server.timezone" value="{{ config.get('Server', 'timezone') }}"
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
@@ -212,13 +208,18 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </details>
 
             <!-- Tracing & Logging -->
-            <div class="theme-panel overflow-hidden mb-6">
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-600 bg-black/5 dark:bg-white/5">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Observability & Logging</h3>
-                </div>
+            <details class="theme-panel overflow-hidden mb-6 group">
+                <summary class="px-6 py-4 border-b border-gray-200 dark:border-gray-600 bg-black/5 dark:bg-white/5 cursor-pointer list-none flex justify-between items-center outline-none focus:ring-2 focus:ring-indigo-500">
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Observability & Logging</h3>
+                    </div>
+                    <span class="transition-transform duration-300 group-open:rotate-180">
+                        <svg class="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                    </span>
+                </summary>
                 <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">OpenTelemetry Enabled</label>
@@ -247,22 +248,28 @@
                         <input type="number" name="Logging.backup_count" value="{{ config.get('Logging', 'backup_count') }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm">
                     </div>
                 </div>
-            </div>
+            </details>
 
             <!-- Email Notifications -->
-            <div class="theme-panel overflow-hidden mb-6">
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-600 bg-black/5 dark:bg-white/5 flex justify-between items-center">
-                    <div>
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Email Failure Notifications</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Configure email alerts for when a schedule fails.</p>
+            <details class="theme-panel overflow-hidden mb-6 group">
+                <summary class="px-6 py-4 border-b border-gray-200 dark:border-gray-600 bg-black/5 dark:bg-white/5 cursor-pointer list-none flex justify-between items-center outline-none focus:ring-2 focus:ring-indigo-500">
+                    <div class="flex items-center justify-between w-full pr-4">
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Email Failure Notifications</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Configure email alerts for when a schedule fails.</p>
+                        </div>
+                        <button type="button" id="manage-email-templates-btn" 
+                            hx-get="/htmx/email_templates" 
+                            hx-target="#email-template-modal-container"
+                            onclick="event.stopPropagation();"
+                            class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition">
+                            Manage Templates
+                        </button>
                     </div>
-                    <button type="button" id="manage-email-templates-btn" 
-                        hx-get="/htmx/email_templates" 
-                        hx-target="#email-template-modal-container"
-                        class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition">
-                        Manage Templates
-                    </button>
-                </div>
+                    <span class="transition-transform duration-300 group-open:rotate-180">
+                        <svg class="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                    </span>
+                </summary>
                 <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="md:col-span-2 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-200 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email Mode</label>
@@ -311,11 +318,15 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </details>
 
-            <div class="flex justify-end pb-12">
+            <div class="flex justify-end items-center gap-4 pb-12">
+                <button type="button" id="view-readme-btn" onclick="document.getElementById('docs-modal').classList.remove('hidden'); loadReadme('README.md');"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded shadow-lg transition duration-200 focus:outline-none">
+                    View Documentation
+                </button>
                 <button type="submit" id="save-btn"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow-lg transition duration-200">
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow-lg transition duration-200 focus:outline-none">
                     Save Settings
                 </button>
             </div>
@@ -440,6 +451,25 @@
         if (emailThrottleCb) {
             emailThrottleCb.addEventListener('change', toggleEmailThrottle);
             toggleEmailThrottle();
+        }
+
+        // Toggle All Sections Logic
+        const toggleAllBtn = document.getElementById('toggle-all-sections-btn');
+        if (toggleAllBtn) {
+            toggleAllBtn.addEventListener('click', function() {
+                const detailsElements = document.querySelectorAll('details.theme-panel');
+                const isExpanding = toggleAllBtn.innerText.includes('Expand');
+                
+                detailsElements.forEach(details => {
+                    if (isExpanding) {
+                        details.setAttribute('open', '');
+                    } else {
+                        details.removeAttribute('open');
+                    }
+                });
+                
+                toggleAllBtn.innerText = isExpanding ? 'Collapse All' : 'Expand All';
+            });
         }
     </script>
     {% endblock %}

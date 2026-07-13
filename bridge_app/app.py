@@ -90,11 +90,12 @@ def create_app(config_class=Config):
     from bridge_app.utils.errors import register_error_handlers
     register_error_handlers(app)
 
-    from bridge_app.config import get_theme
+    from bridge_app.config import get_theme, get_layout
     @app.context_processor
     def inject_theme():
         return dict(
             current_theme=get_theme(),
+            ui_layout=get_layout(),
             app_timezone=app.config.get('APP_TIMEZONE', 'UTC'),
             ui_date_format=app.config.get('UI_DATE_FORMAT', 'DD/MM/YYYY HH:mm:ss')
         )

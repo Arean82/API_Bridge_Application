@@ -18,8 +18,33 @@
     <script>window.hljs || document.write(`<script src="{{ url_for('static', filename='vendor/highlight.min.js') }}"><\/script>`)</script>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    
+    <style>
+        /* Smooth transitions for sidebar elements */
+        .sidebar-expanded .sidebar-text {
+            opacity: 1;
+            display: block;
+        }
+        .sidebar-collapsed .sidebar-text {
+            opacity: 0;
+            display: none;
+        }
+        .sidebar-collapsed {
+            width: 4.5rem; /* ~72px */
+        }
+        .sidebar-expanded {
+            width: 14rem; /* 224px */
+        }
+        /* Ensure theme nav styles are applied properly to sidebar */
+        aside.theme-nav {
+            border-right: 1px solid rgba(0,0,0,0.1);
+        }
+        .dark aside.theme-nav {
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+    </style>
 </head>
-<body data-initial-theme="{{ current_theme }}" class="font-sans antialiased">
+<body data-initial-theme="{{ current_theme }}" class="font-sans antialiased {% if ui_layout == 'sidebar' %}flex h-screen overflow-hidden{% endif %}">
     <!-- Blocking script to prevent FOUC (Flash of Unstyled Content) -->
     <script>
         (function() {
@@ -44,49 +69,41 @@
         })();
     </script>
     
-    <nav class="theme-nav p-4 flex justify-between items-center">
-        <div class="flex items-center space-x-6">
-            <a href="/" class="flex items-center space-x-2">
-                <img src="{{ url_for('static', filename='favicon.ico') }}" alt="Synora Bridge Logo" class="h-8 w-8">
-                <h1 class="text-2xl font-bold tracking-wide">Synora Bridge</h1>
-            </a>
-            <nav class="flex gap-4">
-                <a href="/" class="hover:opacity-75 transition {% if request.path == '/' %}text-blue-400 font-bold{% endif %}">Schedule Config</a>
-                <a href="/templates" class="hover:opacity-75 transition {% if request.path == '/templates' %}text-blue-400 font-bold{% endif %}">Templates</a>
-                <a href="/templates/create" class="hover:opacity-75 transition {% if request.path == '/templates/create' %}text-blue-400 font-bold{% endif %}">Create Template</a>
-                <a href="/connections" class="hover:opacity-75 transition {% if request.path == '/connections' %}text-blue-400 font-bold{% endif %}">Connections</a>
-                <a href="/audit-logs" class="hover:opacity-75 transition {% if request.path == '/audit-logs' %}text-blue-400 font-bold{% endif %}">Audit Logs</a>
-                <a href="/settings" class="hover:opacity-75 transition {% if request.path == '/settings' %}text-blue-400 font-bold{% endif %}">Settings</a>
-            </nav>
-        </div>
-        <div class="flex items-center space-x-4">
-            <!-- Theme Color Selector (Original) -->
-            <select id="themeSelector" class="bg-white text-black text-sm rounded-md border border-gray-300 p-1 cursor-pointer">
-                <option value="default">Default Light</option>
-                <option value="glass">Glassmorphism</option>
-                <option value="clay">Claymorphism</option>
-                <option value="neobrut">Neo-Brutalism</option>
-            </select>
-            
-            <!-- Dark/Light/Auto Toggle Icon -->
-            <button id="modeToggleBtn" class="text-xl focus:outline-none" title="Toggle Dark/Light/Auto Mode">
-                <span id="modeIconAuto" style="display:none;">🖥️</span>
-                <span id="modeIconLight" style="display:none;">☀️</span>
-                <span id="modeIconDark" style="display:none;">🌙</span>
-            </button>
-        </div>
-    </nav>
+    {% if ui_layout == 'sidebar' %}
+    <!-- SIDEBAR LAYOUT -->
+    {% include 'partials/_sidebar.html' %}
 
-    <div class="container mx-auto mt-8 p-4">
-        {% block content %}{% endblock %}
+    <!-- Main Content Area Wrapper -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative bg-transparent">
+        <div class="flex-1 overflow-y-auto p-4 lg:p-8">
+            <div class="container mx-auto">
+    {% else %}
+    <!-- TOP NAVBAR LAYOUT -->
+    {% include 'partials/_topbar.html' %}
+
+    <div class="container mx-auto mt-8 p-4 min-h-[calc(100vh-200px)]">
+    {% endif %}
+    
+                <!-- SINGLE DECLARATION OF CONTENT BLOCK -->
+                {% block content %}{% endblock %}
+
+    {% if ui_layout == 'sidebar' %}
+            </div>
+        </div>
+    </main>
+    {% else %}
     </div>
 
     <footer class="theme-nav p-4 mt-12 text-center text-sm opacity-80">
-        <p>&copy; 2026 Synora Bridge. All rights reserved. A product of <a href="https://SynoraStudio.in" target="_blank" class="text-blue-500 hover:text-blue-400 font-semibold transition-colors">SynoraStudio.in</a>.</p>
+        <p>&copy; 2026 Synora Bridge. All rights reserved. A product of <a href="https://SynoraStudio.in" target="_blank" class="hover:underline font-semibold transition-colors">SynoraStudio.in</a>.</p>
     </footer>
+    {% endif %}
+
     <script src="{{ url_for('static', filename='js/push_handler.js') }}?v=4"></script>
     <script src="{{ url_for('static', filename='js/pull_rest_handler.js') }}?v=4"></script>
     <script src="{{ url_for('static', filename='js/pull_graphql_handler.js') }}?v=4"></script>
     <script type="module" src="{{ url_for('static', filename='js/theme.js') }}?v=4"></script>
+    
+
 </body>
 </html>

@@ -41,6 +41,11 @@ class ThemeManager {
                 this.saveTheme();
             });
         }
+        
+        this.themeToggleBtn = document.getElementById('themeToggleBtn');
+        if (this.themeToggleBtn) {
+            this.themeToggleBtn.addEventListener('click', () => this.toggleTheme());
+        }
 
         if (this.modeToggleBtn) {
             this.modeToggleBtn.addEventListener('click', () => this.toggleMode());
@@ -51,6 +56,16 @@ class ThemeManager {
         const modes = ['auto', 'light', 'dark'];
         let idx = modes.indexOf(this.colorMode);
         this.colorMode = modes[(idx + 1) % modes.length];
+        this.saveTheme();
+    }
+
+    toggleTheme() {
+        if (!this.themeSelector) return;
+        const options = Array.from(this.themeSelector.options).map(o => o.value);
+        let idx = options.indexOf(this.currentTheme);
+        if (idx === -1) idx = 0;
+        this.currentTheme = options[(idx + 1) % options.length];
+        this.themeSelector.value = this.currentTheme;
         this.saveTheme();
     }
 

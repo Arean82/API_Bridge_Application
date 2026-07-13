@@ -45,6 +45,12 @@ def get_theme():
     color_mode = config_ini.get('UI', 'colorMode', fallback='auto')
     return json.dumps({"theme": theme_val, "colorMode": color_mode})
 
+def get_layout():
+    config_ini.read(config_path)
+    if not config_ini.has_section('UI'):
+        return 'sidebar'
+    return config_ini.get('UI', 'layout', fallback='sidebar')
+
 def set_theme(theme_name, color_mode):
     import re
     with open(config_path, 'r') as f:

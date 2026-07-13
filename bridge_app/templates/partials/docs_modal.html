@@ -13,23 +13,23 @@
                         <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">README
                         </h3>
                         <!-- Manual Buttons for Specific Readme Files -->
-                        <button onclick="loadReadme('README.md')"
-                            class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-600">Main
+                        <button onclick="loadReadme('README.md')" data-file="README.md"
+                            class="readme-btn px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-600">Main
                             README</button>
-                        <button onclick="loadReadme('user_manual.md')"
-                            class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-600">User
+                        <button onclick="loadReadme('user_manual.md')" data-file="user_manual.md"
+                            class="readme-btn px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-600">User
                             Manual</button>
-                        <button onclick="loadReadme('INSTALLATION_MANUAL.md')"
-                            class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-600">Install
+                        <button onclick="loadReadme('INSTALLATION_MANUAL.md')" data-file="INSTALLATION_MANUAL.md"
+                            class="readme-btn px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-600">Install
                             Guide</button>
-                        <button onclick="loadReadme('SCALING_REDIS_MEMURAI.md')"
-                            class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-600">Scaling</button>
-                        <button onclick="loadReadme('SECURITY.md')"
-                            class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-600">Security</button>
+                        <button onclick="loadReadme('SCALING_REDIS_MEMURAI.md')" data-file="SCALING_REDIS_MEMURAI.md"
+                            class="readme-btn px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-600">Scaling</button>
+                        <button onclick="loadReadme('SECURITY.md')" data-file="SECURITY.md"
+                            class="readme-btn px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-600">Security</button>
                     </div>
                     <button type="button" onclick="document.getElementById('docs-modal').classList.add('hidden')"
-                        class="text-gray-400 hover:text-gray-500 text-2xl font-bold">
-                        &times;
+                        class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-1.5 px-4 rounded transition text-sm">
+                        Close
                     </button>
                 </div>
                 <div
@@ -45,6 +45,39 @@
                             padding: 15px;
                             background-color: transparent;
                         }
+                        .dark .markdown-body {
+                            color: #e5e7eb !important;
+                        }
+                        .dark .markdown-body h1, .dark .markdown-body h2, .dark .markdown-body h3, .dark .markdown-body h4, .dark .markdown-body h5, .dark .markdown-body h6 {
+                            color: #f3f4f6 !important;
+                            border-bottom-color: #374151 !important;
+                        }
+                        .dark .markdown-body code {
+                            background-color: #374151 !important;
+                            color: #e5e7eb !important;
+                        }
+                        .dark .markdown-body pre {
+                            background-color: #1f2937 !important;
+                        }
+                        .dark .markdown-body pre code {
+                            background-color: transparent !important;
+                        }
+                        .dark .markdown-body a {
+                            color: #60a5fa !important;
+                        }
+                        .dark .markdown-body table tr, .dark .markdown-body table tr:nth-child(2n) {
+                            background-color: transparent !important;
+                        }
+                        .dark .markdown-body table th, .dark .markdown-body table td {
+                            border-color: #374151 !important;
+                        }
+                        .dark .markdown-body blockquote {
+                            color: #9ca3af !important;
+                            border-left-color: #374151 !important;
+                        }
+                        .dark .markdown-body img {
+                            background-color: transparent !important;
+                        }
                     </style>
                     <div id="markdown-container" class="markdown-body text-gray-800 dark:text-gray-200">
                         Loading documentation...
@@ -54,3 +87,31 @@
         </div>
     </div>
 </div>
+
+<!-- Local JS for Markdown (Now fully modular) -->
+<script src="{{ url_for('static', filename='vendor/marked.min.js') }}"></script>
+<script>
+    function loadReadme(filename) {
+        // Highlight active button
+        document.querySelectorAll('.readme-btn').forEach(btn => {
+            if (btn.dataset.file === filename) {
+                btn.classList.remove('bg-gray-200', 'dark:bg-gray-700', 'text-gray-900', 'dark:text-white', 'hover:bg-gray-300', 'dark:hover:bg-gray-600');
+                btn.classList.add('bg-indigo-600', 'text-white', 'hover:bg-indigo-700');
+            } else {
+                btn.classList.remove('bg-indigo-600', 'text-white', 'hover:bg-indigo-700');
+                btn.classList.add('bg-gray-200', 'dark:bg-gray-700', 'text-gray-900', 'dark:text-white', 'hover:bg-gray-300', 'dark:hover:bg-gray-600');
+            }
+        });
+
+        const container = document.getElementById('markdown-container');
+        container.innerHTML = "Loading...";
+        fetch('/htmx/docs/' + filename)
+            .then(response => response.text())
+            .then(text => {
+                container.innerHTML = marked.parse(text);
+            })
+            .catch(err => {
+                container.innerHTML = "Error loading readme: " + err;
+            });
+    }
+</script>
