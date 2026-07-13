@@ -15,4 +15,4 @@ Please include:
 - Steps to reproduce
 - Potential impact
 
-Thank you for helping keep Synora Connect secure.
+Thank you for helping keep Synora Bridge secure.

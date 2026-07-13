@@ -3,7 +3,7 @@
 block_cipher = None
 
 a = Analysis(
-    ['synora_connect.py'],
+    ['synora_bridge.py'],
     pathex=[],
     binaries=[],
     datas=[

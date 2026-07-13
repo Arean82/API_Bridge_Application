@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Synora Connect{% endblock %}</title>
+    <title>{% block title %}Synora Bridge{% endblock %}</title>
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <!-- Tailwind CSS with Local Fallback -->
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
@@ -25,13 +25,36 @@
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
-<body data-initial-theme="{{ current_theme }}" data-theme="{{ current_theme }}" class="font-sans antialiased">
+<body data-initial-theme="{{ current_theme }}" class="font-sans antialiased">
+    <!-- Blocking script to prevent FOUC (Flash of Unstyled Content) -->
+    <script>
+        (function() {
+            try {
+                var initialConfig = document.body.getAttribute('data-initial-theme');
+                initialConfig = initialConfig.replace(/'/g, '"');
+                var config = JSON.parse(initialConfig);
+                if (typeof config === 'string') config = JSON.parse(config);
+                
+                var theme = config.theme || 'default';
+                var mode = config.colorMode || 'auto';
+                var isDark = (mode === 'auto') 
+                    ? window.matchMedia('(prefers-color-scheme: dark)').matches 
+                    : (mode === 'dark');
+                
+                document.body.setAttribute('data-theme', theme);
+                document.body.setAttribute('data-color-mode', isDark ? 'dark' : 'light');
+                if (isDark) document.documentElement.classList.add('dark');
+            } catch (e) {
+                console.warn("FOUC prevention failed", e);
+            }
+        })();
+    </script>
     
     <nav class="theme-nav p-4 flex justify-between items-center">
         <div class="flex items-center space-x-6">
             <a href="/" class="flex items-center space-x-2">
-                <img src="{{ url_for('static', filename='favicon.ico') }}" alt="Synora Connect Logo" class="h-8 w-8">
-                <h1 class="text-2xl font-bold tracking-wide">Synora Connect</h1>
+                <img src="{{ url_for('static', filename='favicon.ico') }}" alt="Synora Bridge Logo" class="h-8 w-8">
+                <h1 class="text-2xl font-bold tracking-wide">Synora Bridge</h1>
             </a>
             <nav class="flex gap-4">
                 <a href="/" class="hover:opacity-75 transition {% if request.path == '/' %}text-blue-400 font-bold{% endif %}">Schedule Config</a>
@@ -63,6 +86,10 @@
     <div class="container mx-auto mt-8 p-4">
         {% block content %}{% endblock %}
     </div>
+
+    <footer class="theme-nav p-4 mt-12 text-center text-sm opacity-80">
+        <p>&copy; 2026 Synora Bridge. All rights reserved. A product of <a href="https://SynoraStudio.in" target="_blank" class="text-blue-500 hover:text-blue-400 font-semibold transition-colors">SynoraStudio.in</a>.</p>
+    </footer>
     <script src="{{ url_for('static', filename='js/push_handler.js') }}?v=4"></script>
     <script src="{{ url_for('static', filename='js/pull_rest_handler.js') }}?v=4"></script>
     <script src="{{ url_for('static', filename='js/pull_graphql_handler.js') }}?v=4"></script>

@@ -1,4 +1,4 @@
-# 📖 Beginner's Guide to the Synora Connect
+# 📖 Beginner's Guide to the Synora Bridge
 
 Welcome! This guide is written for complete beginners. If you want to take data from an internal system (like your GPS tracker) and push it to an external client without writing code, you are in the right place!
 

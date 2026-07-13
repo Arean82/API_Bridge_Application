@@ -1,6 +1,6 @@
 @echo off
 echo =======================================================
-echo Universal API Bridge - Isolated Build Environment
+echo Universal Synora Bridge - Isolated Build Environment
 echo =======================================================
 echo.
 
