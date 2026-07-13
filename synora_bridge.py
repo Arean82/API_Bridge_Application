@@ -65,7 +65,7 @@ def run_gui(host, port, debug, base_dir):
         ctk.set_default_color_theme("blue")
         
         root = ctk.CTk()
-        root.title("Synora Connect - Server Console")
+        root.title("Synora Bridge - Server Console")
         root.geometry("800x550")
         
         # --- Windows Taskbar Icon Fix ---
@@ -225,7 +225,7 @@ def run_gui(host, port, debug, base_dir):
         flask_thread.start()
 
         # Welcome message
-        print(f"Synora Connect Server running on http://127.0.0.1:{port}")
+        print(f"Synora Bridge Server running on http://127.0.0.1:{port}")
         print("-" * 50)
 
         # Auto-open browser
@@ -241,7 +241,7 @@ def run_gui(host, port, debug, base_dir):
 def run_terminal(host, port, debug):
     """Fallback interactive terminal."""
     print("=" * 50)
-    print("Synora Connect - Terminal Mode")
+    print("Synora Bridge - Terminal Mode")
     print("=" * 50)
     
     server_thread = threading.Thread(target=start_flask_server, args=(host, port, debug), daemon=True)
@@ -270,7 +270,7 @@ def main():
     port = config.getint('Server', 'port', fallback=5000)
     debug = config.getboolean('Server', 'debug', fallback=False)
     
-    parser = argparse.ArgumentParser(description="Synora Connect Launcher")
+    parser = argparse.ArgumentParser(description="Synora Bridge Launcher")
     parser.add_argument('--mode', choices=['docker', 'gui', 'terminal'], default='gui', help="Launch mode")
     args = parser.parse_args()
     

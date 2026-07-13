@@ -1,4 +1,4 @@
-# Universal API Bridge
+# Universal Synora Bridge
 
 A lightweight, robust, and fully dynamic Flask application designed to bridge data from internal Partner APIs (Source) to any external Client APIs (Destination). 
 
@@ -95,7 +95,7 @@ Choose one of the three execution modes:
 
 > [!TIP]
 > **Extreme Scaling & Multi-Node Clusters**
-> If you are deploying to a production cluster or need to process thousands of endpoints simultaneously across multiple servers, the API Bridge supports distributed execution via Redis (Linux) and Memurai (Windows).
+> If you are deploying to a production cluster or need to process thousands of endpoints simultaneously across multiple servers, the Synora Bridge supports distributed execution via Redis (Linux) and Memurai (Windows).
 > 
 > See the [Distributed Execution & Scaling Guide](SCALING_REDIS_MEMURAI.md) for setup instructions.
 

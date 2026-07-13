@@ -1,7 +1,7 @@
 [project]
-name = "api-bridge-application"
+name = "synora-bridge"
 version = "0.1.0"
-description = "API Bridge Application"
+description = "Synora Bridge Application"
 authors = [
     { name = "Arean Narrayan", email = "contact@synorastudio.in" }
 ]

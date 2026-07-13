@@ -1,6 +1,6 @@
 # Distributed Execution & Scaling
 
-To achieve extreme scaling (hundreds of parallel processes and thousands of concurrent APIs), you can configure the API Bridge to use **Redis** (on Linux) or **Memurai** (on Windows) as its central task broker.
+To achieve extreme scaling (hundreds of parallel processes and thousands of concurrent APIs), you can configure the Synora Bridge to use **Redis** (on Linux) or **Memurai** (on Windows) as its central task broker.
 
 By doing this, you can run `python synora_connect.py` (or the compiled `.exe`) on multiple different servers simultaneously. Redis acts as a distributed lock—ensuring that if a scheduled job triggers, only *one* of the servers picks it up and processes it, preventing duplicate data pushes.
 
@@ -48,9 +48,9 @@ By default, Redis and Memurai allow open access without a password, which is a s
 
 ## 3. Configuring the Application
 
-Once your Redis/Memurai server is running and secured, you simply need to tell the API Bridge how to access it.
+Once your Redis/Memurai server is running and secured, you simply need to tell the Synora Bridge how to access it.
 
-1. Open your `config.ini` file in the root of the API Bridge project.
+1. Open your `config.ini` file in the root of the Synora Bridge project.
 2. Under the `[Server]` section, add the `redis_url` property using the following connection string format:
    - Without password: `redis://localhost:6379/0`
    - With password: `redis://:your_super_strong_password@localhost:6379/0`
@@ -67,7 +67,7 @@ redis_url = redis://:your_super_strong_password@localhost:6379/0
 
 ## 4. Verifying Access & Connectivity
 
-Before running a full cluster, verify that your API Bridge can successfully communicate with the Redis broker.
+Before running a full cluster, verify that your Synora Bridge can successfully communicate with the Redis broker.
 
 ### Method 1: Ping the Server
 Use the built-in CLI tools to verify connectivity.
@@ -85,7 +85,7 @@ Use the built-in CLI tools to verify connectivity.
 *(A successful connection will return `PONG`)*
 
 ### Method 2: Application Boot Logs
-When you start the API Bridge via `python synora_connect.py`, watch the terminal output carefully. 
+When you start the Synora Bridge via `python synora_connect.py`, watch the terminal output carefully. 
 - If the connection string is correct, APScheduler will silently bind to the RedisJobStore.
 - If the password or port is incorrect, you will immediately see a `redis.exceptions.AuthenticationError` or `redis.exceptions.ConnectionError` in the terminal when booting up.
 
