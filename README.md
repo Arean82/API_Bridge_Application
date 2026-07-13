@@ -17,7 +17,7 @@ This application adheres to a clean, scalable **Model-View-Controller + Service 
 - **OpenTelemetry Observability (OTLP)**: Natively instruments application traces and exports them via OTLP (compatible with Jaeger, Zabbix, or Datadog) using `config.ini`.
 - **CORS-Enabled Mock Server**: Automatically generates functional `/api/mock/<id>/<path>` REST endpoints from OpenAPI 3.0.3 / Swagger configurations to serve static JSON examples to external frontends.
 - **Dynamic Environments**: Configure multiple environment URLs (Dev/Staging/Prod) per connection and seamlessly switch between them in the UI.
-- **Pull REST Mode**: Auto-generates live Swagger UI endpoints (`/api/bridge/pull/<slug>/<dest>/`) with full OpenAPI spec from your field mappings. Dynamically supports **OpenAPI 3.1.0, 3.0.3, and Swagger 2.0** on the fly.
+- **Pull REST Mode**: Auto-generates live Swagger UI endpoints (`/api/bridge/pull/<slug>/<dest>/`) with full OpenAPI spec from your field mappings. Dynamically supports **OpenAPI 3.2.0 (default), 3.1.0, 3.0.3, and Swagger 2.0** on the fly.
 - **Pull GraphQL Mode**: Auto-generates a GraphQL Playground IDE (`/api/graphql/<slug>/<dest>/`) with a dynamic schema built from your field mappings.
 - **Multi-Destination Support**: Each template supports multiple destination endpoints, each with independent field mappings, auth, and HTTP methods.
 

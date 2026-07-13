@@ -20,10 +20,13 @@
 
 import json
 
-def generate_pull_endpoint_swagger_spec(template, requested_version='3.1.0'):
+# Supported OpenAPI versions (default is 3.2.0)
+SUPPORTED_OPENAPI_VERSIONS = ['2.0', '3.0.3', '3.1.0', '3.2.0']
+
+def generate_pull_endpoint_swagger_spec(template, requested_version='3.2.0'):
     """
     Generates an OpenAPI spec for the given template's pull endpoints based on requested_version.
-    Supports '2.0', '3.0.3', and '3.1.0'.
+    Supports '2.0', '3.0.3', '3.1.0', and '3.2.0'.
     """
     t_dict = template.to_dict()
     destinations = t_dict.get('destinations', [])
@@ -34,11 +37,13 @@ def generate_pull_endpoint_swagger_spec(template, requested_version='3.1.0'):
     
     # Generate links for markdown description
     links_md = "\n\n**Available API Versions:**\n"
-    for v in ['3.1.0', '3.0.3', '2.0']:
-        # if the requested version doesn't start with the same prefix (e.g. 3.1 vs 3.0 vs 2.0)
-        if not requested_version.startswith(v[:3]): 
-            links_md += f"- [View {'Swagger' if v == '2.0' else 'OpenAPI'} {v}](/api/bridge/pull/{template.slug}/docs?version={v})\n"
-            
+    # Iterate over supported versions, newest first
+    for v in SUPPORTED_OPENAPI_VERSIONS[::-1]:
+        # Skip the currently requested version
+        if v == requested_version:
+            continue
+        links_md += f"- [View {'Swagger' if v == '2.0' else 'OpenAPI'} {v}](/api/bridge/pull/{template.slug}/docs?version={v})\n"
+    
     base_description = "Auto-generated API Gateway for Template: " + template.name + links_md
             
     spec = {}
@@ -51,7 +56,8 @@ def generate_pull_endpoint_swagger_spec(template, requested_version='3.1.0'):
         }
         spec["basePath"] = "/"
     else:
-        spec["openapi"] = requested_version if requested_version in ['3.0.3', '3.1.0'] else '3.1.0'
+        # Use the requested version if it is a supported OpenAPI version, otherwise fall back to 3.2.0
+        spec["openapi"] = requested_version if requested_version in SUPPORTED_OPENAPI_VERSIONS[1:] else '3.2.0'
         spec["info"] = {
             "title": template.name,
             "description": base_description,
@@ -142,7 +148,7 @@ def generate_pull_endpoint_swagger_spec(template, requested_version='3.1.0'):
         
     return spec
 
-def get_swagger_ui_html(title, template_slug, requested_version='3.1.0'):
+def get_swagger_ui_html(title, template_slug, requested_version='3.2.0'):
     """
     Returns the HTML string to render Swagger UI configured for the given template.
     """

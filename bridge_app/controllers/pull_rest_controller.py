@@ -113,7 +113,7 @@ def pull_endpoint_swagger_spec(template_slug):
     if not template:
         abort(404)
         
-    requested_version = request.args.get('version', '3.1.0')
+    requested_version = request.args.get('version', '3.2.0')
     from bridge_app.services.swagger_service import generate_pull_endpoint_swagger_spec
     spec = generate_pull_endpoint_swagger_spec(template, requested_version)
     return jsonify(spec)
@@ -127,7 +127,7 @@ def pull_endpoint_swagger_ui(template_slug):
     if not template:
         abort(404)
         
-    requested_version = request.args.get('version', '3.1.0')
+    requested_version = request.args.get('version', '3.2.0')
     from bridge_app.services.swagger_service import get_swagger_ui_html
     html = get_swagger_ui_html(template.name, template_slug, requested_version)
     return render_template_string(html)
