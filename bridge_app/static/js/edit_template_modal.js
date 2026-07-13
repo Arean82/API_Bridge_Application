@@ -134,7 +134,6 @@ class TemplateModalController {
         await this.populateForm(templateId);
         this.templateName = this.templateName ? this.templateName + " (Copy)" : "New Clone";
         this.templateId = null;
-        this.templateId = null;
         this.executionMode = 'push';
         this.renderAll();
         this.showModal();

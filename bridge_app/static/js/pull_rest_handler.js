@@ -169,7 +169,7 @@ class PullRestHandler {
                         <div class="bg-black/5 p-3 rounded border border-black/10">
                             <div class="mb-2">
                                 <span class="text-xs font-bold text-gray-700 dark:text-gray-300">Base URL:</span>
-                                <span class="text-xs font-mono ml-2 theme-text-muted">${window.location.origin}</span>
+                                <span class="text-xs font-mono ml-2 theme-text-muted base-url-preview">${window.location.origin}${url}</span>
                             </div>
                             <div>
                                 <span class="text-xs font-bold text-gray-700 dark:text-gray-300">Endpoint Path:</span>
@@ -186,8 +186,11 @@ class PullRestHandler {
             
             div.querySelector('.dest-name-in').addEventListener('input', (e) => {
                 this.destinations[idx].name = e.target.value;
+                const newUrl = this.generateEndpointUrl(e.target.value);
                 const urlPreview = div.querySelector('.url-preview');
-                if (urlPreview) urlPreview.textContent = this.generateEndpointUrl(e.target.value);
+                const baseUrlPreview = div.querySelector('.base-url-preview');
+                if (urlPreview) urlPreview.textContent = newUrl;
+                if (baseUrlPreview) baseUrlPreview.textContent = window.location.origin + newUrl;
                 const namePreview = div.querySelector('.dest-name-preview');
                 if (namePreview) namePreview.textContent = e.target.value;
             });

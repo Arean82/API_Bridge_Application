@@ -75,15 +75,22 @@
                             {% endif %}
                             <button class="edit-template-btn font-medium px-2 py-1 rounded transition text-sm opacity-75 hover:opacity-100" data-id="{{ template.id }}">Edit</button>
                             <a href="/templates/create?clone={{ template.id }}"
-                                class="font-medium px-2 py-1 rounded transition text-sm text-green-600 hover:text-green-800">Edit as New</a>
-                            <button class="clone-template-btn font-medium px-2 py-1 rounded transition text-sm text-indigo-600 hover:text-indigo-800" data-id="{{ template.id }}">Clone</button>
+                                class="font-medium px-2 py-1 rounded transition text-sm text-green-600 hover:text-green-800">Clone</a>
                             <button class="delete-template-btn text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded transition text-sm" data-id="{{ template.id }}">Delete</button>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="5" class="p-8 text-center theme-text-muted">
-                            <p class="text-md font-medium" style="color: var(--text-main);">{{ empty_message }}</p>
+                        <td colspan="5" class="p-12 text-center">
+                            <div class="flex flex-col items-center justify-center">
+                                <svg class="w-12 h-12 theme-text-muted mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                                <p class="text-lg font-medium mb-1" style="color: var(--text-main);">{{ empty_message }}</p>
+                                <p class="text-sm theme-text-muted mb-6">Get started by creating a new template configuration.</p>
+                                <a href="/templates/create" class="theme-btn px-4 py-2 text-sm font-medium rounded-md inline-flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                    Create Template
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
